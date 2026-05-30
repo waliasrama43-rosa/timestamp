@@ -2,7 +2,7 @@
   "name": "TrustMark",
   "short_name": "TrustMark",
   "description": "Photo timestamp and watermark verification tool",
-  "start_url": ".",
+  "start_url": "./",
   "display": "standalone",
   "orientation": "portrait",
   "theme_color": "#1B3A5C",

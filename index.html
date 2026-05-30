@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>TrustMark</title>
-  <link rel="manifest" href="manifest.json">
+  <link rel="manifest" href="?page=manifest">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
@@ -905,15 +905,28 @@ select.form-control { appearance: none; background: var(--white) url("data:image
 
 
   // ==================== LOGO ====================
+  var LOGO_MAX_SIZE = 500 * 1024; // 500KB max for localStorage safety
+
   function initLogo() {
     $('btnUploadLogo').addEventListener('click', function() { $('logoInput').click(); });
     $('logoInput').addEventListener('change', function(e) {
       var file = e.target.files[0];
       if (!file) return;
+      // Reject logos over 500KB to avoid localStorage quota issues
+      if (file.size > LOGO_MAX_SIZE) {
+        alert('Logo terlalu besar (maks 500KB). Pilih file yang lebih kecil.');
+        return;
+      }
       var reader = new FileReader();
       reader.onload = function(ev) {
         state.logoDataURL = ev.target.result;
-        localStorage.setItem('trustmark_logo', ev.target.result);
+        try {
+          localStorage.setItem('trustmark_logo', ev.target.result);
+        } catch(e) {
+          alert('Gagal menyimpan logo: penyimpanan penuh. Coba file yang lebih kecil.');
+          state.logoDataURL = null;
+          return;
+        }
         var img = new Image();
         img.onload = function() {
           state.logoImage = img;
@@ -975,27 +988,16 @@ select.form-control { appearance: none; background: var(--white) url("data:image
     });
   }
 
-  // ==================== CANVAS PREVIEW ====================
-  function renderPreview() {
-    var canvas = $('previewCanvas');
-    var ctx = canvas.getContext('2d');
-    if (!state.photoImage) return;
-
-    var img = state.photoImage;
-    var w = img.naturalWidth;
-    var h = img.naturalHeight;
-    canvas.width = w;
-    canvas.height = h;
-
-    // Draw photo
-    ctx.drawImage(img, 0, 0, w, h);
-
-    // Calculate overlay dimensions
-    var overlayHeight = Math.max(h * 0.18, 120);
-    var overlayY = h - overlayHeight;
+  // ==================== CANVAS OVERLAY (SHARED) ====================
+  function renderOverlay(ctx, w, h) {
+    // Calculate font and overlay dimensions based on image width
     var padding = w * 0.025;
     var fontSize = Math.max(w * 0.022, 12);
     var lineHeight = fontSize * 1.5;
+    var numLines = 5;
+    // Overlay height derived from actual content size to prevent overflow
+    var overlayHeight = Math.max(lineHeight * numLines + padding * 2, 120);
+    var overlayY = h - overlayHeight;
 
     // Draw overlay background
     ctx.fillStyle = 'rgba(0,0,0,0.65)';
@@ -1022,7 +1024,6 @@ select.form-control { appearance: none; background: var(--white) url("data:image
 
     // Line 3: Full address (White)
     var addressStr = state.location.address || '-';
-    // Truncate if too long
     if (addressStr.length > 80) addressStr = addressStr.substring(0, 77) + '...';
     ctx.fillText(addressStr, padding, textY);
     textY += lineHeight;
@@ -1055,6 +1056,25 @@ select.form-control { appearance: none; background: var(--white) url("data:image
       ctx.fillText('TrustMark', padding, overlayY - (w * 0.02));
       ctx.restore();
     }
+  }
+
+  // ==================== CANVAS PREVIEW ====================
+  function renderPreview() {
+    var canvas = $('previewCanvas');
+    var ctx = canvas.getContext('2d');
+    if (!state.photoImage) return;
+
+    var img = state.photoImage;
+    var w = img.naturalWidth;
+    var h = img.naturalHeight;
+    canvas.width = w;
+    canvas.height = h;
+
+    // Draw photo
+    ctx.drawImage(img, 0, 0, w, h);
+
+    // Render overlay using shared function
+    renderOverlay(ctx, w, h);
   }
 
 
@@ -1109,8 +1129,8 @@ select.form-control { appearance: none; background: var(--white) url("data:image
       timestamp: new Date().toISOString(),
       app: 'TrustMark v1.0'
     });
-    // UserComment needs to be encoded with charset prefix
-    exifObj['Exif'][piexif.ExifIFD.UserComment] = 'ASCII\x00\x00\x00' + payload;
+    // Let piexifjs handle the charset encoding internally
+    exifObj['Exif'][piexif.ExifIFD.UserComment] = payload;
 
     return exifObj;
   }
@@ -1128,6 +1148,9 @@ select.form-control { appearance: none; background: var(--white) url("data:image
   }
 
   // ==================== QRIS PAYMENT ====================
+  // NOTE: Payment verification is client-side only (by design per requirements).
+  // No server-side verification exists. Payment state in localStorage is user-editable.
+  // A server-side check would require GAS webhook integration in a future iteration.
   var QRIS_STATIC = '00020101021126740022ID.CO.BANKMUAMALAT.WWW011893600147265474970902155499712001344810303UMI51440014ID.CO.QRIS.WWW0215ID10232525176520303UMI5204549953033605802ID5917NASI JAGUNG PUSPO6008PASURUAN61056717662070703A01630470AF';
 
   function parseTLV(payload) {
@@ -1174,10 +1197,10 @@ select.form-control { appearance: none; background: var(--white) url("data:image
     tags = tags.filter(function(t) { return t.tag !== '63'; });
     // Remove existing amount tag (54) if any
     tags = tags.filter(function(t) { return t.tag !== '54'; });
-    // Insert amount tag 54 before tag 58 or at end
+    // Insert amount tag 54 in correct EMVCo position (before tag 55 or 58)
     var amountStr = amount.toString();
     var amountTag = { tag: '54', length: amountStr.length, value: amountStr };
-    var insertIdx = tags.findIndex(function(t) { return parseInt(t.tag) > 54; });
+    var insertIdx = tags.findIndex(function(t) { return t.tag === '55' || t.tag === '58'; });
     if (insertIdx === -1) insertIdx = tags.length;
     tags.splice(insertIdx, 0, amountTag);
 
@@ -1275,62 +1298,10 @@ select.form-control { appearance: none; background: var(--white) url("data:image
     canvas.height = img.naturalHeight;
     ctx.drawImage(img, 0, 0);
 
-    // Render overlay same as preview
+    // Render overlay using shared function
     var w = canvas.width;
     var h = canvas.height;
-    var overlayHeight = Math.max(h * 0.18, 120);
-    var overlayY = h - overlayHeight;
-    var padding = w * 0.025;
-    var fontSize = Math.max(w * 0.022, 12);
-    var lineHeight = fontSize * 1.5;
-
-    ctx.fillStyle = 'rgba(0,0,0,0.65)';
-    ctx.fillRect(0, overlayY, w, overlayHeight);
-
-    var textY = overlayY + padding + fontSize;
-
-    ctx.fillStyle = '#D4A841';
-    ctx.font = 'bold ' + fontSize + 'px sans-serif';
-    var dateStr = state.dateTime ? formatDateWIB(state.dateTime) : '--';
-    var timeStr = state.dateTime ? formatTimeWIB(state.dateTime) : '--:--:-- WIB';
-    var locName = state.location.name || '-';
-    ctx.fillText('\uD83D\uDCC5 ' + dateStr + '  |  \u23F0 ' + timeStr + '  |  \uD83D\uDCCD ' + locName, padding, textY);
-    textY += lineHeight;
-
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = fontSize + 'px sans-serif';
-    var coordsStr = state.location.lat ? 'Lat: ' + state.location.lat.toFixed(6) + ', Long: ' + state.location.lng.toFixed(6) : 'Lat: -, Long: -';
-    ctx.fillText(coordsStr, padding, textY);
-    textY += lineHeight;
-
-    var addressStr = state.location.address || '-';
-    if (addressStr.length > 80) addressStr = addressStr.substring(0, 77) + '...';
-    ctx.fillText(addressStr, padding, textY);
-    textY += lineHeight;
-
-    ctx.fillText(state.title || '-', padding, textY);
-    textY += lineHeight;
-
-    if (state.logoImage && state.tier !== 'free') {
-      var logoH = lineHeight * 1.2;
-      var logoW = (state.logoImage.naturalWidth / state.logoImage.naturalHeight) * logoH;
-      ctx.drawImage(state.logoImage, padding, textY - fontSize, logoW, logoH);
-    }
-
-    ctx.fillStyle = '#2E7D5B';
-    var vrfText = '\u2713 ' + state.vrfCode;
-    ctx.font = 'bold ' + fontSize + 'px sans-serif';
-    var vrfWidth = ctx.measureText(vrfText).width;
-    ctx.fillText(vrfText, w - padding - vrfWidth, textY);
-
-    if (state.tier === 'free') {
-      ctx.save();
-      ctx.globalAlpha = 0.3;
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = 'bold ' + (w * 0.04) + 'px sans-serif';
-      ctx.fillText('TrustMark', padding, overlayY - (w * 0.02));
-      ctx.restore();
-    }
+    renderOverlay(ctx, w, h);
 
     // Convert to JPEG dataURL
     var jpegDataURL = canvas.toDataURL('image/jpeg', 0.92);
@@ -1369,7 +1340,7 @@ select.form-control { appearance: none; background: var(--white) url("data:image
   // ==================== PWA / SERVICE WORKER ====================
   function registerSW() {
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js').catch(function(err) {
+      navigator.serviceWorker.register('?page=sw').catch(function(err) {
         console.log('SW registration failed:', err);
       });
     }
