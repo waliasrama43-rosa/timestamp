@@ -1,0 +1,21 @@
+{
+  "project_type": "Google Apps Script PWA - Photo Timestamp/Timemark Web Application",
+  "language": "JavaScript (client-side), Google Apps Script (server-side)",
+  "build_system": "None - GAS deploys directly. All client-side code embedded in HTML.",
+  "test_framework": "Manual browser testing. No automated test framework (GAS constraint).",
+  "build_command": "N/A - validate HTML/JS syntax with node",
+  "test_command": "node --check on extracted JS sections, validate JSON files with node -e",
+  "verification_instructions": "1. Validate Code.gs syntax, 2. Validate index.html is well-formed, 3. Validate manifest.json is valid JSON, 4. Check that all required PWA elements are present, 5. Open index.html in browser to verify rendering",
+  "snapshot_or_generated_files": null,
+  "setup_instructions": "No setup needed - all files are self-contained for GAS deployment",
+  "environment_constraints": "OPEN_INTERNET - full access to CDNs. GAS constraint: all frontend must be in single HTML file or use include pattern. Service worker and manifest served via GAS endpoints.",
+  "contribution_requirements": "N/A - greenfield project",
+  "key_patterns": "GAS pattern: doGet() returns HtmlService output. All heavy processing client-side using Canvas API. Libraries loaded via CDN. Data persisted in localStorage.",
+  "relevant_files": [
+    "/projects/sandbox/timestamp/Code.gs",
+    "/projects/sandbox/timestamp/index.html",
+    "/projects/sandbox/timestamp/manifest.json",
+    "/projects/sandbox/timestamp/sw.js"
+  ],
+  "directory_structure": "Flat structure required by GAS: Code.gs (backend), index.html (full app), manifest.json (PWA), sw.js (service worker)"
+}

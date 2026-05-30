@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1B3A5C">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>TrustMark</title>
+  <link rel="manifest" href="?page=manifest">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
+  <script src="https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.js"><\/script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"><\/script>
+  <style>
+:root {
+  --primary: #1B3A5C;
+  --accent: #D4A841;
+  --success: #2E7D5B;
+  --bg: #F5F7FA;
+  --white: #FFFFFF;
+  --text: #333333;
+  --text-light: #666666;
+  --border: #E0E4E8;
+  --shadow: 0 2px 8px rgba(0,0,0,0.1);
+  --radius: 12px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding-bottom: 70px;
+  overflow-x: hidden;
+}
+.app-header {
+  background: var(--primary);
+  color: var(--white);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+.app-header h1 { font-size: 20px; font-weight: 700; letter-spacing: 0.5px; }
+.tier-badge {
+  background: var(--accent);
+  color: var(--primary);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.main-content { padding: 16px; max-width: 600px; margin: 0 auto; }
+.card {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+.card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--primary);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card-title .material-icons { font-size: 20px; color: var(--accent); }
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-primary { background: var(--primary); color: var(--white); }
+.btn-primary:hover { background: #244a72; }
+.btn-accent { background: var(--accent); color: var(--primary); }
+.btn-accent:hover { background: #c49a35; }
+.btn-success { background: var(--success); color: var(--white); }
+.btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+.btn-block { width: 100%; }
+.upload-zone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 30px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: var(--bg);
+}
+.upload-zone:hover, .upload-zone.dragover {
+  border-color: var(--accent);
+  background: rgba(212,168,65,0.05);
+}
+.upload-zone .material-icons { font-size: 48px; color: var(--accent); }
+.upload-zone p { color: var(--text-light); margin-top: 8px; font-size: 14px; }
+.upload-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.form-group { margin-bottom: 12px; }
+.form-group label {
+  display: block; font-size: 12px; font-weight: 600;
+  color: var(--text-light); margin-bottom: 4px;
+}
+.form-control {
+  width: 100%; padding: 10px 12px; border: 1px solid var(--border);
+  border-radius: 8px; font-size: 14px; outline: none; transition: border 0.2s;
+}
+.form-control:focus { border-color: var(--primary); }
+select.form-control { appearance: none; background: var(--white) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E") no-repeat right 12px center; padding-right: 32px; }
+.mini-map {
+  width: 100%; height: 120px; border-radius: 8px;
+  overflow: hidden; margin-bottom: 8px; background: #ddd;
+}
+.location-info { font-size: 12px; color: var(--text-light); line-height: 1.6; }
+.location-info strong { color: var(--text); }
+.vrf-code {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(46,125,91,0.1); padding: 10px 14px;
+  border-radius: 8px; font-family: monospace; font-size: 16px;
+  font-weight: 700; color: var(--success);
+}
+.vrf-code .material-icons { color: var(--success); }
+.canvas-container {
+  width: 100%; border-radius: 8px; overflow: hidden;
+  background: #000; position: relative;
+}
+.canvas-container canvas { width: 100%; display: block; }
+.download-section { text-align: center; padding: 20px 0; }
+.download-btn {
+  background: var(--accent); color: var(--primary);
+  padding: 14px 32px; border-radius: 10px; font-size: 16px;
+  font-weight: 700; border: none; cursor: pointer;
+  box-shadow: 0 4px 12px rgba(212,168,65,0.3);
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.download-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(212,168,65,0.4); }
+.download-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.download-warning { font-size: 11px; color: var(--text-light); margin-top: 8px; }
+.payment-banner {
+  background: linear-gradient(135deg, var(--primary), #2a4f7a);
+  color: var(--white); border-radius: var(--radius); padding: 16px;
+  margin-bottom: 16px; text-align: center;
+}
+.payment-banner h3 { font-size: 14px; margin-bottom: 8px; }
+.payment-banner p { font-size: 12px; opacity: 0.8; margin-bottom: 12px; }
+.modal-overlay {
+  display: none; position: fixed; top: 0; left: 0;
+  width: 100%; height: 100%; background: rgba(0,0,0,0.6);
+  z-index: 1000; align-items: center; justify-content: center;
+}
+.modal-overlay.active { display: flex; }
+.modal {
+  background: var(--white); border-radius: var(--radius);
+  width: 95%; max-width: 500px; max-height: 90vh; overflow-y: auto;
+  padding: 20px; position: relative;
+}
+.modal-full {
+  width: 100%; height: 100%; max-width: 100%; max-height: 100%;
+  border-radius: 0; display: flex; flex-direction: column;
+}
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border);
+}
+.modal-header h2 { font-size: 16px; color: var(--primary); }
+.modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-light); }
+#mapContainer { flex: 1; min-height: 300px; border-radius: 8px; z-index: 1; }
+.map-search { display: flex; gap: 8px; margin-bottom: 12px; }
+.map-search input { flex: 1; }
+.favorites-list { margin-top: 12px; max-height: 150px; overflow-y: auto; }
+.fav-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px; background: var(--bg); border-radius: 6px;
+  margin-bottom: 6px; font-size: 12px; cursor: pointer;
+}
+.fav-item:hover { background: rgba(212,168,65,0.1); }
+.fav-item .fav-del { color: red; cursor: pointer; border: none; background: none; font-size: 14px; }
+.pricing-tiers { display: flex; flex-direction: column; gap: 12px; margin: 16px 0; }
+.pricing-card {
+  border: 2px solid var(--border); border-radius: 10px;
+  padding: 14px; text-align: center; cursor: pointer; transition: all 0.2s;
+}
+.pricing-card:hover, .pricing-card.selected { border-color: var(--accent); background: rgba(212,168,65,0.05); }
+.pricing-card h4 { color: var(--primary); margin-bottom: 4px; }
+.pricing-card .price { font-size: 20px; font-weight: 700; color: var(--accent); }
+.pricing-card .period { font-size: 12px; color: var(--text-light); }
+.pricing-card ul { list-style: none; font-size: 12px; text-align: left; margin-top: 8px; }
+.pricing-card ul li { padding: 2px 0; }
+.pricing-card ul li::before { content: "\2713 "; color: var(--success); }
+.qr-container { text-align: center; margin: 16px 0; }
+.qr-amount { font-size: 14px; font-weight: 600; margin-top: 8px; color: var(--primary); text-align: center; }
+.qr-unique { font-size: 11px; color: var(--text-light); text-align: center; }
+.logo-preview {
+  width: 60px; height: 60px; border-radius: 8px;
+  border: 1px solid var(--border); object-fit: contain;
+  background: var(--bg); display: none;
+}
+.logo-preview.visible { display: block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner {
+  width: 24px; height: 24px; border: 3px solid var(--border);
+  border-top-color: var(--accent); border-radius: 50%;
+  animation: spin 0.8s linear infinite; margin: 0 auto;
+}
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; width: 100%;
+  background: var(--white); border-top: 1px solid var(--border);
+  display: flex; justify-content: space-around; padding: 8px 0;
+  z-index: 100;
+}
+.bottom-nav button {
+  background: none; border: none; display: flex; flex-direction: column;
+  align-items: center; gap: 2px; font-size: 10px; color: var(--text-light);
+  cursor: pointer; padding: 4px 12px;
+}
+.bottom-nav button.active { color: var(--primary); }
+.bottom-nav button .material-icons { font-size: 22px; }
+@media (min-width: 768px) {
+  .main-content { padding: 24px; }
+  .card { padding: 20px; }
+  .upload-zone { padding: 40px; }
+  .mini-map { height: 160px; }
+}
+@media (min-width: 1024px) {
+  .main-content { max-width: 800px; }
+  body { padding-bottom: 0; }
+  .bottom-nav { display: none; }
+  .app-header { padding: 16px 40px; }
+}
+.hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <h1>TrustMark</h1>
+    <span class="tier-badge" id="tierBadge">FREE</span>
+  </header>
+
+  <main class="main-content">
+    <!-- Photo Upload -->
+    <div class="card" id="cardPhoto">
+      <div class="card-title"><span class="material-icons">photo_camera</span> Unggah Foto</div>
+      <div class="upload-zone" id="uploadZone">
+        <span class="material-icons">cloud_upload</span>
+        <p>Ketuk untuk memilih foto atau seret file ke sini</p>
+      </div>
+      <div class="upload-actions">
+        <button class="btn btn-primary btn-sm" id="btnPickFile"><span class="material-icons">folder_open</span> Pilih File</button>
+        <button class="btn btn-outline btn-sm" id="btnCamera"><span class="material-icons">camera_alt</span> Kamera</button>
+      </div>
+      <input type="file" id="fileInput" accept="image/*" class="hidden">
+      <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden">
+    </div>
+
+    <!-- DateTime -->
+    <div class="card" id="cardDateTime">
+      <div class="card-title"><span class="material-icons">schedule</span> Tanggal &amp; Waktu</div>
+      <div class="form-group">
+        <label>Waktu</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="datetime-local" id="inputDateTime" class="form-control" style="flex:1;">
+          <button class="btn btn-accent btn-sm" id="btnAutoTime">Otomatis</button>
+        </div>
+        <small style="color:var(--text-light);font-size:11px;margin-top:4px;display:block;">Zona waktu: WIB (UTC+07:00)</small>
+      </div>
+    </div>
+
+    <!-- Location -->
+    <div class="card" id="cardLocation">
+      <div class="card-title"><span class="material-icons">location_on</span> Lokasi</div>
+      <div class="mini-map" id="miniMap"></div>
+      <div class="location-info" id="locationInfo">
+        <div><strong id="locName">Belum dipilih</strong></div>
+        <div id="locCoords">-</div>
+        <div id="locAddress">-</div>
+      </div>
+      <div style="margin-top:10px;display:flex;gap:8px;">
+        <button class="btn btn-primary btn-sm" id="btnOpenMap"><span class="material-icons">map</span> Pilih Lokasi</button>
+        <button class="btn btn-outline btn-sm" id="btnGPS"><span class="material-icons">my_location</span> GPS</button>
+      </div>
+    </div>
+
+    <!-- Title & Organization -->
+    <div class="card" id="cardTitle">
+      <div class="card-title"><span class="material-icons">edit</span> Judul &amp; Organisasi</div>
+      <div class="form-group">
+        <label>Judul / Referensi</label>
+        <input type="text" id="inputTitle" class="form-control" placeholder="Contoh: Survei Lokasi Proyek A">
+      </div>
+      <div class="form-group">
+        <label>Nama Organisasi</label>
+        <input type="text" id="inputOrg" class="form-control" placeholder="Contoh: PT. Maju Bersama">
+      </div>
+    </div>
+
+    <!-- Logo -->
+    <div class="card" id="cardLogo">
+      <div class="card-title"><span class="material-icons">image</span> Logo Organisasi</div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <img id="logoPreview" class="logo-preview" alt="Logo">
+        <button class="btn btn-outline btn-sm" id="btnUploadLogo"><span class="material-icons">upload</span> Unggah Logo</button>
+        <button class="btn btn-sm" id="btnRemoveLogo" style="color:red;display:none;">Hapus</button>
+      </div>
+      <input type="file" id="logoInput" accept="image/*" class="hidden">
+    </div>
+
+    <!-- Device Info -->
+    <div class="card" id="cardDevice">
+      <div class="card-title"><span class="material-icons">smartphone</span> Info Perangkat</div>
+      <div class="form-group">
+        <label>Perangkat</label>
+        <select id="selectDevice" class="form-control">
+          <option value="">-- Deteksi otomatis --</option>
+          <option value="Samsung Galaxy A54">Samsung Galaxy A54</option>
+          <option value="Samsung Galaxy S23">Samsung Galaxy S23</option>
+          <option value="Samsung Galaxy A14">Samsung Galaxy A14</option>
+          <option value="Xiaomi Redmi Note 12">Xiaomi Redmi Note 12</option>
+          <option value="Xiaomi POCO X5">Xiaomi POCO X5</option>
+          <option value="Xiaomi 13T">Xiaomi 13T</option>
+          <option value="OPPO A78">OPPO A78</option>
+          <option value="OPPO Reno 10">OPPO Reno 10</option>
+          <option value="Vivo Y36">Vivo Y36</option>
+          <option value="Vivo V29">Vivo V29</option>
+          <option value="iPhone 15">iPhone 15</option>
+          <option value="iPhone 14">iPhone 14</option>
+          <option value="iPhone 13">iPhone 13</option>
+          <option value="Realme 11">Realme 11</option>
+          <option value="Infinix Hot 30">Infinix Hot 30</option>
+        </select>
+      </div>
+      <small style="color:var(--text-light);font-size:11px;" id="detectedDevice"></small>
+    </div>
+
+    <!-- Verification Code -->
+    <div class="card" id="cardVRF">
+      <div class="card-title"><span class="material-icons">verified</span> Kode Verifikasi</div>
+      <div class="vrf-code">
+        <span class="material-icons">check_circle</span>
+        <span id="vrfCode">VRF-XXXXXX</span>
+      </div>
+    </div>
+
+    <!-- Live Preview -->
+    <div class="card" id="cardPreview">
+      <div class="card-title"><span class="material-icons">preview</span> Pratinjau</div>
+      <div class="canvas-container">
+        <canvas id="previewCanvas"></canvas>
+      </div>
+      <p style="font-size:11px;color:var(--text-light);margin-top:8px;text-align:center;">Pratinjau akan muncul setelah foto diunggah</p>
+    </div>
+
+    <!-- Download -->
+    <div class="download-section" id="downloadSection">
+      <button class="download-btn" id="btnDownload" disabled>
+        <span class="material-icons">download</span> Unduh Foto
+      </button>
+      <p class="download-warning">Foto akan hilang setelah halaman ditutup</p>
+      <p id="dailyCounter" style="font-size:11px;color:var(--text-light);margin-top:4px;"></p>
+    </div>
+
+    <!-- Payment Banner -->
+    <div class="payment-banner" id="paymentBanner">
+      <h3>Tingkatkan ke Pro</h3>
+      <p>Tanpa watermark, unlimited foto, logo kustom</p>
+      <button class="btn btn-accent btn-sm" id="btnUpgrade">Lihat Paket</button>
+    </div>
+  </main>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <button class="active" data-section="cardPhoto"><span class="material-icons">photo_camera</span>Foto</button>
+    <button data-section="cardDateTime"><span class="material-icons">schedule</span>Waktu</button>
+    <button data-section="cardLocation"><span class="material-icons">location_on</span>Lokasi</button>
+    <button data-section="cardPreview"><span class="material-icons">preview</span>Preview</button>
+    <button id="btnNavPay" data-action="payment"><span class="material-icons">star</span>Pro</button>
+  </nav>
+
+  <!-- Map Modal -->
+  <div class="modal-overlay" id="mapModal">
+    <div class="modal modal-full">
+      <div class="modal-header">
+        <h2>Pilih Lokasi</h2>
+        <button class="modal-close" id="btnCloseMap">&times;</button>
+      </div>
+      <div class="map-search">
+        <input type="text" id="mapSearchInput" class="form-control" placeholder="Cari lokasi...">
+        <button class="btn btn-primary btn-sm" id="btnMapSearch"><span class="material-icons">search</span></button>
+      </div>
+      <div id="mapContainer"></div>
+      <div id="mapLocInfo" style="padding:8px 0;font-size:12px;color:var(--text-light);"></div>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button class="btn btn-accent btn-block" id="btnConfirmLoc">Gunakan Lokasi Ini</button>
+        <button class="btn btn-outline btn-sm" id="btnSaveFav"><span class="material-icons">star</span></button>
+      </div>
+      <div class="favorites-list" id="favList"></div>
+    </div>
+  </div>
+
+  <!-- Payment Modal -->
+  <div class="modal-overlay" id="paymentModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Langganan TrustMark</h2>
+        <button class="modal-close" id="btnClosePayment">&times;</button>
+      </div>
+      <div class="pricing-tiers">
+        <div class="pricing-card" data-tier="free">
+          <h4>Gratis</h4>
+          <div class="price">Rp 0</div>
+          <ul><li>2 foto per hari</li><li>Watermark TrustMark</li><li>Fitur dasar</li></ul>
+        </div>
+        <div class="pricing-card" data-tier="basic">
+          <h4>Basic</h4>
+          <div class="price">Rp 3.000</div>
+          <div class="period">per hari</div>
+          <ul><li>Unlimited foto</li><li>Tanpa watermark</li><li>Semua fitur</li></ul>
+        </div>
+        <div class="pricing-card" data-tier="pro">
+          <h4>Pro</h4>
+          <div class="price">Rp 15.000</div>
+          <div class="period">per bulan</div>
+          <ul><li>Unlimited foto</li><li>Tanpa watermark</li><li>Logo kustom</li><li>Favorit lokasi</li><li>Prioritas dukungan</li></ul>
+        </div>
+      </div>
+      <div id="qrisSection" class="hidden">
+        <p style="text-align:center;font-size:13px;margin-bottom:8px;">Scan QRIS untuk membayar:</p>
+        <div class="qr-container" id="qrContainer"></div>
+        <p class="qr-amount" id="qrAmount"></p>
+        <p class="qr-unique" id="qrUnique"></p>
+        <button class="btn btn-success btn-block" id="btnConfirmPay" style="margin-top:12px;">
+          <span class="material-icons">check</span> Saya Sudah Bayar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Download Confirm Modal -->
+  <div class="modal-overlay" id="downloadModal">
+    <div class="modal" style="text-align:center;">
+      <div class="modal-header">
+        <h2>Unduh Foto</h2>
+        <button class="modal-close" id="btnCloseDownload">&times;</button>
+      </div>
+      <p style="margin-bottom:16px;font-size:14px;">Foto dengan timemark akan diunduh. Pastikan semua data sudah benar.</p>
+      <button class="btn btn-accent btn-block" id="btnConfirmDownload">
+        <span class="material-icons">download</span> Unduh Sekarang
+      </button>
+    </div>
+  </div>
+
+
+  <script>
+(function() {
+  'use strict';
+
+  // ==================== STATE ====================
+  var state = {
+    photoDataURL: null,
+    photoImage: null,
+    originalExif: null,
+    dateTime: null,
+    location: { lat: null, lng: null, name: '', address: '', coords: '' },
+    title: '',
+    organization: '',
+    logoDataURL: null,
+    logoImage: null,
+    deviceInfo: '',
+    vrfCode: '',
+    tier: 'free', // free, basic, pro
+    subscription: null,
+    dailyCount: 0,
+    dailyDate: ''
+  };
+
+  var miniMap = null;
+  var fullMap = null;
+  var mapMarker = null;
+  var searchTimeout = null;
+
+  // ==================== HELPERS ====================
+  var BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+
+  function $(id) { return document.getElementById(id); }
+
+  function generateVRF() {
+    var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    var code = 'VRF-';
+    for (var i = 0; i < 6; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+    return code;
+  }
+
+  function generateUUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      var r = Math.random() * 16 | 0;
+      return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+  }
+
+  function formatDateWIB(dt) {
+    return dt.getDate().toString().padStart(2,'0') + ' ' + BULAN[dt.getMonth()] + ' ' + dt.getFullYear();
+  }
+
+  function formatTimeWIB(dt) {
+    return dt.getHours().toString().padStart(2,'0') + ':' +
+           dt.getMinutes().toString().padStart(2,'0') + ':' +
+           dt.getSeconds().toString().padStart(2,'0') + ' WIB';
+  }
+
+  function getWIBNow() {
+    var now = new Date();
+    var utc = now.getTime() + now.getTimezoneOffset() * 60000;
+    return new Date(utc + 7 * 3600000);
+  }
+
+  function toLocalInputValue(dt) {
+    var y = dt.getFullYear();
+    var m = (dt.getMonth()+1).toString().padStart(2,'0');
+    var d = dt.getDate().toString().padStart(2,'0');
+    var h = dt.getHours().toString().padStart(2,'0');
+    var min = dt.getMinutes().toString().padStart(2,'0');
+    return y+'-'+m+'-'+d+'T'+h+':'+min;
+  }
+
+  function decimalToDMS(deg) {
+    var absolute = Math.abs(deg);
+    var degrees = Math.floor(absolute);
+    var minutesNotTruncated = (absolute - degrees) * 60;
+    var minutes = Math.floor(minutesNotTruncated);
+    var seconds = (minutesNotTruncated - minutes) * 60;
+    return [[degrees,1],[minutes,1],[Math.round(seconds*100),100]];
+  }
+
+  function detectDevice() {
+    var ua = navigator.userAgent;
+    if (/Samsung/i.test(ua)) return 'Samsung';
+    if (/Xiaomi|Redmi|POCO/i.test(ua)) return 'Xiaomi';
+    if (/OPPO/i.test(ua)) return 'OPPO';
+    if (/vivo/i.test(ua)) return 'Vivo';
+    if (/iPhone/i.test(ua)) return 'iPhone';
+    if (/Realme/i.test(ua)) return 'Realme';
+    if (/Infinix/i.test(ua)) return 'Infinix';
+    var match = ua.match(/;\s*([^;)]+)\s*Build/);
+    if (match) return match[1].trim();
+    if (/Android/i.test(ua)) return 'Android Device';
+    if (/iPhone|iPad/i.test(ua)) return 'iPhone';
+    return 'Unknown Device';
+  }
+
+  // ==================== SUBSCRIPTION ====================
+  function loadSubscription() {
+    try {
+      var sub = JSON.parse(localStorage.getItem('trustmark_subscription'));
+      if (sub && sub.expiry && Date.now() < sub.expiry) {
+        state.tier = sub.tier;
+        state.subscription = sub;
+      } else {
+        state.tier = 'free';
+        state.subscription = null;
+        localStorage.removeItem('trustmark_subscription');
+      }
+    } catch(e) { state.tier = 'free'; }
+    updateTierUI();
+  }
+
+  function saveSubscription(tier, amount) {
+    var expiry;
+    if (tier === 'basic') expiry = Date.now() + 24*3600*1000;
+    else if (tier === 'pro') expiry = Date.now() + 30*24*3600*1000;
+    else return;
+    var sub = { tier: tier, expiry: expiry, amount_paid: amount, activated: Date.now() };
+    localStorage.setItem('trustmark_subscription', JSON.stringify(sub));
+    state.tier = tier;
+    state.subscription = sub;
+    updateTierUI();
+  }
+
+  function updateTierUI() {
+    var badge = $('tierBadge');
+    badge.textContent = state.tier.toUpperCase();
+    if (state.tier === 'pro') badge.style.background = '#2E7D5B';
+    else if (state.tier === 'basic') badge.style.background = '#D4A841';
+    else badge.style.background = '#D4A841';
+
+    var banner = $('paymentBanner');
+    if (state.tier !== 'free') banner.style.display = 'none';
+    else banner.style.display = 'block';
+  }
+
+  function getDailyCount() {
+    var today = new Date().toISOString().slice(0,10);
+    var stored = localStorage.getItem('trustmark_daily');
+    if (stored) {
+      try {
+        var data = JSON.parse(stored);
+        if (data.date === today) return data.count;
+      } catch(e) {}
+    }
+    return 0;
+  }
+
+  function incrementDailyCount() {
+    var today = new Date().toISOString().slice(0,10);
+    var count = getDailyCount() + 1;
+    localStorage.setItem('trustmark_daily', JSON.stringify({ date: today, count: count }));
+    updateDailyCounter();
+  }
+
+  function canDownload() {
+    if (state.tier !== 'free') return true;
+    return getDailyCount() < 2;
+  }
+
+  function updateDailyCounter() {
+    var el = $('dailyCounter');
+    if (state.tier === 'free') {
+      var count = getDailyCount();
+      el.textContent = 'Foto hari ini: ' + count + '/2 (Gratis)';
+    } else {
+      el.textContent = 'Paket ' + state.tier.charAt(0).toUpperCase() + state.tier.slice(1) + ' - Unlimited';
+    }
+  }
+
+  // ==================== PHOTO UPLOAD ====================
+  function handlePhoto(file) {
+    if (!file || !file.type.match('image.*')) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      state.photoDataURL = e.target.result;
+      // Read EXIF
+      try {
+        if (file.type === 'image/jpeg') {
+          state.originalExif = piexif.load(e.target.result);
+        } else {
+          state.originalExif = null;
+        }
+      } catch(ex) { state.originalExif = null; }
+
+      var img = new Image();
+      img.onload = function() {
+        state.photoImage = img;
+        state.vrfCode = generateVRF();
+        $('vrfCode').textContent = state.vrfCode;
+        $('btnDownload').disabled = false;
+        renderPreview();
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function initPhotoUpload() {
+    var zone = $('uploadZone');
+    var fileInput = $('fileInput');
+    var cameraInput = $('cameraInput');
+
+    zone.addEventListener('click', function() { fileInput.click(); });
+    $('btnPickFile').addEventListener('click', function() { fileInput.click(); });
+    $('btnCamera').addEventListener('click', function() { cameraInput.click(); });
+
+    fileInput.addEventListener('change', function(e) {
+      if (e.target.files[0]) handlePhoto(e.target.files[0]);
+    });
+    cameraInput.addEventListener('change', function(e) {
+      if (e.target.files[0]) handlePhoto(e.target.files[0]);
+    });
+
+    // Drag & drop
+    zone.addEventListener('dragover', function(e) {
+      e.preventDefault(); zone.classList.add('dragover');
+    });
+    zone.addEventListener('dragleave', function() { zone.classList.remove('dragover'); });
+    zone.addEventListener('drop', function(e) {
+      e.preventDefault(); zone.classList.remove('dragover');
+      if (e.dataTransfer.files[0]) handlePhoto(e.dataTransfer.files[0]);
+    });
+  }
+
+  // ==================== DATETIME ====================
+  function initDateTime() {
+    setAutoTime();
+    $('btnAutoTime').addEventListener('click', setAutoTime);
+    $('inputDateTime').addEventListener('change', function() {
+      var val = this.value;
+      if (val) state.dateTime = new Date(val);
+      renderPreview();
+    });
+  }
+
+  function setAutoTime() {
+    var wib = getWIBNow();
+    state.dateTime = wib;
+    $('inputDateTime').value = toLocalInputValue(wib);
+    renderPreview();
+  }
+
+
+  // ==================== LOCATION / MAP ====================
+  function initLocation() {
+    // Mini map (non-interactive preview)
+    miniMap = L.map('miniMap', { zoomControl: false, dragging: false, scrollWheelZoom: false, attributionControl: false }).setView([-6.2, 106.8], 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(miniMap);
+
+    $('btnOpenMap').addEventListener('click', openMapModal);
+    $('btnGPS').addEventListener('click', getCurrentGPS);
+    $('btnCloseMap').addEventListener('click', closeMapModal);
+    $('btnConfirmLoc').addEventListener('click', confirmLocation);
+    $('btnMapSearch').addEventListener('click', doMapSearch);
+    $('btnSaveFav').addEventListener('click', saveFavorite);
+    $('mapSearchInput').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') doMapSearch();
+    });
+
+    // Load last location
+    try {
+      var last = JSON.parse(localStorage.getItem('trustmark_lastloc'));
+      if (last && last.lat) {
+        state.location = last;
+        updateLocationDisplay();
+      }
+    } catch(e) {}
+
+    loadFavorites();
+  }
+
+  function openMapModal() {
+    $('mapModal').classList.add('active');
+    setTimeout(function() {
+      if (!fullMap) {
+        var center = state.location.lat ? [state.location.lat, state.location.lng] : [-6.2, 106.8];
+        var zoom = state.location.lat ? 15 : 5;
+        fullMap = L.map('mapContainer').setView(center, zoom);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap'
+        }).addTo(fullMap);
+
+        mapMarker = L.marker(center, { draggable: true }).addTo(fullMap);
+        mapMarker.on('dragend', function() {
+          var pos = mapMarker.getLatLng();
+          reverseGeocode(pos.lat, pos.lng);
+        });
+
+        fullMap.on('click', function(e) {
+          mapMarker.setLatLng(e.latlng);
+          reverseGeocode(e.latlng.lat, e.latlng.lng);
+        });
+      } else {
+        fullMap.invalidateSize();
+        if (state.location.lat) {
+          fullMap.setView([state.location.lat, state.location.lng], 15);
+          mapMarker.setLatLng([state.location.lat, state.location.lng]);
+        }
+      }
+    }, 200);
+  }
+
+  function closeMapModal() {
+    $('mapModal').classList.remove('active');
+  }
+
+  // Nominatim geocoding API integration
+  function doMapSearch() {
+    var query = $('mapSearchInput').value.trim();
+    if (!query) return;
+    fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(query) + '&limit=1&countrycodes=id')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data && data.length > 0) {
+          var lat = parseFloat(data[0].lat);
+          var lng = parseFloat(data[0].lon);
+          fullMap.setView([lat, lng], 15);
+          mapMarker.setLatLng([lat, lng]);
+          reverseGeocode(lat, lng);
+        }
+      })
+      .catch(function(err) { console.error('Search error:', err); });
+  }
+
+  function reverseGeocode(lat, lng) {
+    $('mapLocInfo').textContent = 'Memuat alamat...';
+    fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat=' + lat + '&lon=' + lng + '&zoom=18&addressdetails=1')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var name = '';
+        var address = data.display_name || '';
+        if (data.address) {
+          name = data.address.village || data.address.suburb || data.address.city_district || data.address.city || data.address.county || '';
+        }
+        if (!name && data.name) name = data.name;
+        if (!name) name = address.split(',')[0];
+
+        state.location.lat = lat;
+        state.location.lng = lng;
+        state.location.name = name;
+        state.location.address = address;
+        state.location.coords = 'Lat: ' + lat.toFixed(6) + ', Long: ' + lng.toFixed(6);
+
+        $('mapLocInfo').textContent = name + ' (' + lat.toFixed(6) + ', ' + lng.toFixed(6) + ')';
+      })
+      .catch(function() {
+        state.location.lat = lat;
+        state.location.lng = lng;
+        state.location.name = 'Lokasi Peta';
+        state.location.address = '';
+        state.location.coords = 'Lat: ' + lat.toFixed(6) + ', Long: ' + lng.toFixed(6);
+        $('mapLocInfo').textContent = lat.toFixed(6) + ', ' + lng.toFixed(6);
+      });
+  }
+
+  function confirmLocation() {
+    if (!state.location.lat) return;
+    localStorage.setItem('trustmark_lastloc', JSON.stringify(state.location));
+    updateLocationDisplay();
+    closeMapModal();
+    renderPreview();
+  }
+
+  function updateLocationDisplay() {
+    $('locName').textContent = state.location.name || 'Lokasi Dipilih';
+    $('locCoords').textContent = state.location.coords || '-';
+    $('locAddress').textContent = state.location.address || '-';
+    if (state.location.lat && miniMap) {
+      miniMap.setView([state.location.lat, state.location.lng], 14);
+    }
+  }
+
+  function getCurrentGPS() {
+    if (!navigator.geolocation) { alert('GPS tidak tersedia di perangkat ini'); return; }
+    navigator.geolocation.getCurrentPosition(function(pos) {
+      var lat = pos.coords.latitude;
+      var lng = pos.coords.longitude;
+      state.location.lat = lat;
+      state.location.lng = lng;
+      state.location.coords = 'Lat: ' + lat.toFixed(6) + ', Long: ' + lng.toFixed(6);
+      reverseGeocode(lat, lng);
+      setTimeout(function() {
+        updateLocationDisplay();
+        renderPreview();
+      }, 1500);
+      if (miniMap) miniMap.setView([lat, lng], 14);
+    }, function(err) {
+      alert('Gagal mendapatkan lokasi GPS: ' + err.message);
+    }, { enableHighAccuracy: true });
+  }
+
+  function saveFavorite() {
+    if (!state.location.lat) return;
+    var favs = loadFavoritesData();
+    var fav = { name: state.location.name || 'Favorit', lat: state.location.lat, lng: state.location.lng, address: state.location.address };
+    favs.push(fav);
+    localStorage.setItem('trustmark_favorites', JSON.stringify(favs));
+    loadFavorites();
+  }
+
+  function loadFavoritesData() {
+    try { return JSON.parse(localStorage.getItem('trustmark_favorites')) || []; }
+    catch(e) { return []; }
+  }
+
+  function loadFavorites() {
+    var favs = loadFavoritesData();
+    var container = $('favList');
+    container.innerHTML = '';
+    if (favs.length === 0) return;
+    favs.forEach(function(f, idx) {
+      var div = document.createElement('div');
+      div.className = 'fav-item';
+      div.innerHTML = '<span>' + f.name + '</span><button class="fav-del" data-idx="' + idx + '">&times;</button>';
+      div.addEventListener('click', function(e) {
+        if (e.target.classList.contains('fav-del')) {
+          favs.splice(idx, 1);
+          localStorage.setItem('trustmark_favorites', JSON.stringify(favs));
+          loadFavorites();
+          return;
+        }
+        state.location.lat = f.lat;
+        state.location.lng = f.lng;
+        state.location.name = f.name;
+        state.location.address = f.address || '';
+        state.location.coords = 'Lat: ' + f.lat.toFixed(6) + ', Long: ' + f.lng.toFixed(6);
+        if (fullMap) {
+          fullMap.setView([f.lat, f.lng], 15);
+          mapMarker.setLatLng([f.lat, f.lng]);
+        }
+        $('mapLocInfo').textContent = f.name;
+      });
+      container.appendChild(div);
+    });
+  }
+
+
+  // ==================== LOGO ====================
+  var LOGO_MAX_SIZE = 500 * 1024; // 500KB max for localStorage safety
+
+  function initLogo() {
+    $('btnUploadLogo').addEventListener('click', function() { $('logoInput').click(); });
+    $('logoInput').addEventListener('change', function(e) {
+      var file = e.target.files[0];
+      if (!file) return;
+      // Reject logos over 500KB to avoid localStorage quota issues
+      if (file.size > LOGO_MAX_SIZE) {
+        alert('Logo terlalu besar (maks 500KB). Pilih file yang lebih kecil.');
+        return;
+      }
+      var reader = new FileReader();
+      reader.onload = function(ev) {
+        state.logoDataURL = ev.target.result;
+        try {
+          localStorage.setItem('trustmark_logo', ev.target.result);
+        } catch(e) {
+          alert('Gagal menyimpan logo: penyimpanan penuh. Coba file yang lebih kecil.');
+          state.logoDataURL = null;
+          return;
+        }
+        var img = new Image();
+        img.onload = function() {
+          state.logoImage = img;
+          $('logoPreview').src = ev.target.result;
+          $('logoPreview').classList.add('visible');
+          $('btnRemoveLogo').style.display = 'inline-flex';
+          renderPreview();
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    $('btnRemoveLogo').addEventListener('click', function() {
+      state.logoDataURL = null;
+      state.logoImage = null;
+      localStorage.removeItem('trustmark_logo');
+      $('logoPreview').classList.remove('visible');
+      $('btnRemoveLogo').style.display = 'none';
+      renderPreview();
+    });
+
+    // Load from localStorage
+    var saved = localStorage.getItem('trustmark_logo');
+    if (saved) {
+      state.logoDataURL = saved;
+      var img = new Image();
+      img.onload = function() {
+        state.logoImage = img;
+        $('logoPreview').src = saved;
+        $('logoPreview').classList.add('visible');
+        $('btnRemoveLogo').style.display = 'inline-flex';
+      };
+      img.src = saved;
+    }
+  }
+
+  // ==================== DEVICE INFO ====================
+  function initDevice() {
+    var detected = detectDevice();
+    $('detectedDevice').textContent = 'Terdeteksi: ' + detected;
+    state.deviceInfo = detected;
+
+    $('selectDevice').addEventListener('change', function() {
+      state.deviceInfo = this.value || detected;
+      renderPreview();
+    });
+  }
+
+  // ==================== TITLE & ORG ====================
+  function initTitleOrg() {
+    $('inputTitle').addEventListener('input', function() {
+      state.title = this.value;
+      renderPreview();
+    });
+    $('inputOrg').addEventListener('input', function() {
+      state.organization = this.value;
+      renderPreview();
+    });
+  }
+
+  // ==================== CANVAS OVERLAY (SHARED) ====================
+  function renderOverlay(ctx, w, h) {
+    // Calculate font and overlay dimensions based on image width
+    var padding = w * 0.025;
+    var fontSize = Math.max(w * 0.022, 12);
+    var lineHeight = fontSize * 1.5;
+    var numLines = 5;
+    // Overlay height derived from actual content size to prevent overflow
+    var overlayHeight = Math.max(lineHeight * numLines + padding * 2, 120);
+    var overlayY = h - overlayHeight;
+
+    // Draw overlay background
+    ctx.fillStyle = 'rgba(0,0,0,0.65)';
+    ctx.fillRect(0, overlayY, w, overlayHeight);
+
+    var textY = overlayY + padding + fontSize;
+
+    // Line 1: Date | Time | Location (Gold)
+    ctx.fillStyle = '#D4A841';
+    ctx.font = 'bold ' + fontSize + 'px sans-serif';
+    var dateStr = state.dateTime ? formatDateWIB(state.dateTime) : '--';
+    var timeStr = state.dateTime ? formatTimeWIB(state.dateTime) : '--:--:-- WIB';
+    var locName = state.location.name || '-';
+    var line1 = '\uD83D\uDCC5 ' + dateStr + '  |  \u23F0 ' + timeStr + '  |  \uD83D\uDCCD ' + locName;
+    ctx.fillText(line1, padding, textY);
+    textY += lineHeight;
+
+    // Line 2: GPS coords (White)
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = fontSize + 'px sans-serif';
+    var coordsStr = state.location.lat ? 'Lat: ' + state.location.lat.toFixed(6) + ', Long: ' + state.location.lng.toFixed(6) : 'Lat: -, Long: -';
+    ctx.fillText(coordsStr, padding, textY);
+    textY += lineHeight;
+
+    // Line 3: Full address (White)
+    var addressStr = state.location.address || '-';
+    if (addressStr.length > 80) addressStr = addressStr.substring(0, 77) + '...';
+    ctx.fillText(addressStr, padding, textY);
+    textY += lineHeight;
+
+    // Line 4: Title (White)
+    var titleStr = state.title || '-';
+    ctx.fillText(titleStr, padding, textY);
+    textY += lineHeight;
+
+    // Line 5: Logo left, VRF badge right
+    if (state.logoImage && state.tier !== 'free') {
+      var logoH = lineHeight * 1.2;
+      var logoW = (state.logoImage.naturalWidth / state.logoImage.naturalHeight) * logoH;
+      ctx.drawImage(state.logoImage, padding, textY - fontSize, logoW, logoH);
+    }
+
+    // VRF badge on right
+    ctx.fillStyle = '#2E7D5B';
+    var vrfText = '\u2713 ' + state.vrfCode;
+    ctx.font = 'bold ' + fontSize + 'px sans-serif';
+    var vrfWidth = ctx.measureText(vrfText).width;
+    ctx.fillText(vrfText, w - padding - vrfWidth, textY);
+
+    // Free tier watermark
+    if (state.tier === 'free') {
+      ctx.save();
+      ctx.globalAlpha = 0.3;
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold ' + (w * 0.04) + 'px sans-serif';
+      ctx.fillText('TrustMark', padding, overlayY - (w * 0.02));
+      ctx.restore();
+    }
+  }
+
+  // ==================== CANVAS PREVIEW ====================
+  function renderPreview() {
+    var canvas = $('previewCanvas');
+    var ctx = canvas.getContext('2d');
+    if (!state.photoImage) return;
+
+    var img = state.photoImage;
+    var w = img.naturalWidth;
+    var h = img.naturalHeight;
+    canvas.width = w;
+    canvas.height = h;
+
+    // Draw photo
+    ctx.drawImage(img, 0, 0, w, h);
+
+    // Render overlay using shared function
+    renderOverlay(ctx, w, h);
+  }
+
+
+  // ==================== EXIF MODULE ====================
+  function buildExifData() {
+    var exifObj = state.originalExif || { '0th': {}, 'Exif': {}, 'GPS': {}, '1st': {} };
+    if (!exifObj['0th']) exifObj['0th'] = {};
+    if (!exifObj['Exif']) exifObj['Exif'] = {};
+    if (!exifObj['GPS']) exifObj['GPS'] = {};
+
+    // DateTime
+    if (state.dateTime) {
+      var dt = state.dateTime;
+      var dtStr = dt.getFullYear() + ':' +
+                  (dt.getMonth()+1).toString().padStart(2,'0') + ':' +
+                  dt.getDate().toString().padStart(2,'0') + ' ' +
+                  dt.getHours().toString().padStart(2,'0') + ':' +
+                  dt.getMinutes().toString().padStart(2,'0') + ':' +
+                  dt.getSeconds().toString().padStart(2,'0');
+      exifObj['0th'][piexif.ImageIFD.DateTime] = dtStr;
+      exifObj['Exif'][piexif.ExifIFD.DateTimeOriginal] = dtStr;
+      exifObj['Exif'][piexif.ExifIFD.DateTimeDigitized] = dtStr;
+      exifObj['Exif'][piexif.ExifIFD.OffsetTimeOriginal] = '+07:00';
+    }
+
+    // GPS
+    if (state.location.lat !== null && state.location.lng !== null) {
+      var lat = state.location.lat;
+      var lng = state.location.lng;
+      exifObj['GPS'][piexif.GPSIFD.GPSLatitudeRef] = lat >= 0 ? 'N' : 'S';
+      exifObj['GPS'][piexif.GPSIFD.GPSLatitude] = decimalToDMS(lat);
+      exifObj['GPS'][piexif.GPSIFD.GPSLongitudeRef] = lng >= 0 ? 'E' : 'W';
+      exifObj['GPS'][piexif.GPSIFD.GPSLongitude] = decimalToDMS(lng);
+    }
+
+    // Device
+    var device = state.deviceInfo || 'Unknown';
+    var parts = device.split(' ');
+    var make = parts[0] || 'Unknown';
+    var model = device;
+    exifObj['0th'][piexif.ImageIFD.Make] = make;
+    exifObj['0th'][piexif.ImageIFD.Model] = model;
+    exifObj['0th'][piexif.ImageIFD.Software] = 'TrustMark v1.0';
+    exifObj['0th'][piexif.ImageIFD.Artist] = 'TrustMark';
+
+    // Exif extras
+    exifObj['Exif'][piexif.ExifIFD.ImageUniqueID] = generateUUID();
+
+    // UserComment - JSON validation payload
+    var payload = JSON.stringify({
+      vrf: state.vrfCode,
+      timestamp: new Date().toISOString(),
+      app: 'TrustMark v1.0'
+    });
+    // Let piexifjs handle the charset encoding internally
+    exifObj['Exif'][piexif.ExifIFD.UserComment] = payload;
+
+    return exifObj;
+  }
+
+  function injectExif(jpegDataURL) {
+    try {
+      var exifObj = buildExifData();
+      var exifBytes = piexif.dump(exifObj);
+      var newDataURL = piexif.insert(exifBytes, jpegDataURL);
+      return newDataURL;
+    } catch(e) {
+      console.error('EXIF injection error:', e);
+      return jpegDataURL;
+    }
+  }
+
+  // ==================== QRIS PAYMENT ====================
+  // NOTE: Payment verification is client-side only (by design per requirements).
+  // No server-side verification exists. Payment state in localStorage is user-editable.
+  // A server-side check would require GAS webhook integration in a future iteration.
+  var QRIS_STATIC = '00020101021126740022ID.CO.BANKMUAMALAT.WWW011893600147265474970902155499712001344810303UMI51440014ID.CO.QRIS.WWW0215ID10232525176520303UMI5204549953033605802ID5917NASI JAGUNG PUSPO6008PASURUAN61056717662070703A01630470AF';
+
+  function parseTLV(payload) {
+    var tags = [];
+    var i = 0;
+    while (i < payload.length) {
+      if (i + 4 > payload.length) break;
+      var tag = payload.substring(i, i+2);
+      var len = parseInt(payload.substring(i+2, i+4), 10);
+      if (isNaN(len)) break;
+      var val = payload.substring(i+4, i+4+len);
+      tags.push({ tag: tag, length: len, value: val });
+      i += 4 + len;
+    }
+    return tags;
+  }
+
+  function buildTLV(tags) {
+    var result = '';
+    tags.forEach(function(t) {
+      var val = t.value;
+      var len = val.length.toString().padStart(2, '0');
+      result += t.tag + len + val;
+    });
+    return result;
+  }
+
+  function crcCCITT(str) {
+    var crc = 0xFFFF;
+    for (var i = 0; i < str.length; i++) {
+      crc ^= str.charCodeAt(i) << 8;
+      for (var j = 0; j < 8; j++) {
+        if (crc & 0x8000) crc = (crc << 1) ^ 0x1021;
+        else crc <<= 1;
+        crc &= 0xFFFF;
+      }
+    }
+    return crc.toString(16).toUpperCase().padStart(4, '0');
+  }
+
+  function generateDynamicQRIS(amount) {
+    var tags = parseTLV(QRIS_STATIC);
+    // Remove CRC tag (63)
+    tags = tags.filter(function(t) { return t.tag !== '63'; });
+    // Remove existing amount tag (54) if any
+    tags = tags.filter(function(t) { return t.tag !== '54'; });
+    // Insert amount tag 54 in correct EMVCo position (before tag 55 or 58)
+    var amountStr = amount.toString();
+    var amountTag = { tag: '54', length: amountStr.length, value: amountStr };
+    var insertIdx = tags.findIndex(function(t) { return t.tag === '55' || t.tag === '58'; });
+    if (insertIdx === -1) insertIdx = tags.length;
+    tags.splice(insertIdx, 0, amountTag);
+
+    // Build payload without CRC
+    var payloadWithoutCRC = buildTLV(tags);
+    // Add CRC tag placeholder for calculation: "6304"
+    var forCRC = payloadWithoutCRC + '6304';
+    var crc = crcCCITT(forCRC);
+    return payloadWithoutCRC + '6304' + crc;
+  }
+
+  var selectedTier = null;
+  var paymentAmount = 0;
+
+  function initPayment() {
+    $('btnUpgrade').addEventListener('click', openPaymentModal);
+    $('btnNavPay').addEventListener('click', openPaymentModal);
+    $('btnClosePayment').addEventListener('click', function() { $('paymentModal').classList.remove('active'); });
+    $('btnConfirmPay').addEventListener('click', confirmPayment);
+
+    document.querySelectorAll('.pricing-card').forEach(function(card) {
+      card.addEventListener('click', function() {
+        var tier = this.getAttribute('data-tier');
+        if (tier === 'free') return;
+        selectedTier = tier;
+        document.querySelectorAll('.pricing-card').forEach(function(c) { c.classList.remove('selected'); });
+        this.classList.add('selected');
+        showQRIS(tier);
+      });
+    });
+  }
+
+  function openPaymentModal() {
+    $('paymentModal').classList.add('active');
+    $('qrisSection').classList.add('hidden');
+    selectedTier = null;
+    document.querySelectorAll('.pricing-card').forEach(function(c) { c.classList.remove('selected'); });
+  }
+
+  function showQRIS(tier) {
+    var baseAmount = tier === 'basic' ? 3000 : 15000;
+    var uniqueSuffix = Math.floor(Math.random() * 99) + 1;
+    paymentAmount = baseAmount + uniqueSuffix;
+
+    var qrisPayload = generateDynamicQRIS(paymentAmount);
+    $('qrisSection').classList.remove('hidden');
+    $('qrAmount').textContent = 'Total: Rp ' + paymentAmount.toLocaleString('id-ID');
+    $('qrUnique').textContent = 'Kode unik: +Rp ' + uniqueSuffix + ' (untuk verifikasi)';
+
+    var container = $('qrContainer');
+    container.innerHTML = '';
+    if (typeof QRCode !== 'undefined') {
+      QRCode.toCanvas(qrisPayload, { width: 220, margin: 2 }, function(err, canvas) {
+        if (!err) container.appendChild(canvas);
+        else container.textContent = 'Gagal membuat QR';
+      });
+    }
+  }
+
+  function confirmPayment() {
+    if (!selectedTier) return;
+    saveSubscription(selectedTier, paymentAmount);
+    $('paymentModal').classList.remove('active');
+    updateDailyCounter();
+    renderPreview();
+    alert('Terima kasih! Paket ' + selectedTier.charAt(0).toUpperCase() + selectedTier.slice(1) + ' aktif.');
+  }
+
+
+  // ==================== DOWNLOAD ====================
+  function initDownload() {
+    $('btnDownload').addEventListener('click', function() {
+      if (!state.photoImage) return;
+      if (!canDownload()) {
+        alert('Batas foto harian tercapai (2/hari). Tingkatkan paket untuk unlimited.');
+        openPaymentModal();
+        return;
+      }
+      $('downloadModal').classList.add('active');
+    });
+
+    $('btnCloseDownload').addEventListener('click', function() { $('downloadModal').classList.remove('active'); });
+    $('btnConfirmDownload').addEventListener('click', doDownload);
+  }
+
+  function doDownload() {
+    $('downloadModal').classList.remove('active');
+    if (!state.photoImage) return;
+
+    // Render final canvas at full res
+    var canvas = document.createElement('canvas');
+    var ctx = canvas.getContext('2d');
+    var img = state.photoImage;
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    ctx.drawImage(img, 0, 0);
+
+    // Render overlay using shared function
+    var w = canvas.width;
+    var h = canvas.height;
+    renderOverlay(ctx, w, h);
+
+    // Convert to JPEG dataURL
+    var jpegDataURL = canvas.toDataURL('image/jpeg', 0.92);
+
+    // Inject EXIF
+    jpegDataURL = injectExif(jpegDataURL);
+
+    // Create download
+    var now = state.dateTime || new Date();
+    var filename = 'TrustMark_' + now.getFullYear() + '-' +
+      (now.getMonth()+1).toString().padStart(2,'0') + '-' +
+      now.getDate().toString().padStart(2,'0') + '_' +
+      now.getHours().toString().padStart(2,'0') +
+      now.getMinutes().toString().padStart(2,'0') +
+      now.getSeconds().toString().padStart(2,'0') + '.jpg';
+
+    // Convert dataURL to blob
+    var byteString = atob(jpegDataURL.split(',')[1]);
+    var ab = new ArrayBuffer(byteString.length);
+    var ia = new Uint8Array(ab);
+    for (var i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+    var blob = new Blob([ab], { type: 'image/jpeg' });
+
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    incrementDailyCount();
+  }
+
+  // ==================== PWA / SERVICE WORKER ====================
+  function registerSW() {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('?page=sw').catch(function(err) {
+        console.log('SW registration failed:', err);
+      });
+    }
+  }
+
+  // ==================== BOTTOM NAV ====================
+  function initNav() {
+    document.querySelectorAll('.bottom-nav button[data-section]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.bottom-nav button').forEach(function(b) { b.classList.remove('active'); });
+        this.classList.add('active');
+        var section = this.getAttribute('data-section');
+        var el = document.getElementById(section);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+  }
+
+  // ==================== INITIALIZATION ====================
+  document.addEventListener('DOMContentLoaded', function() {
+    registerSW();
+    loadSubscription();
+    updateDailyCounter();
+    initPhotoUpload();
+    initDateTime();
+    initLocation();
+    initLogo();
+    initDevice();
+    initTitleOrg();
+    initPayment();
+    initDownload();
+    initNav();
+
+    // Generate initial VRF code
+    state.vrfCode = generateVRF();
+    $('vrfCode').textContent = state.vrfCode;
+  });
+
+})();
+  </script>
+</body>
+</html>

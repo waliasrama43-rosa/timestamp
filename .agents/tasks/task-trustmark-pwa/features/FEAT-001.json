@@ -1,0 +1,24 @@
+{
+  "id": "FEAT-001",
+  "type": "feat",
+  "description": "Create the Google Apps Script backend (Code.gs) and PWA infrastructure files (manifest.json, sw.js). Code.gs serves the main HTML app and provides endpoints for manifest and service worker. This is the foundation that all other features build upon.",
+  "status": "completed",
+  "steps": [
+    "Create /projects/sandbox/timestamp/Code.gs with: doGet() function that serves index.html via HtmlService.createHtmlOutputFromFile(), include() helper function for file inclusion, doGetManifest() or web app routing to serve manifest.json and sw.js content",
+    "Create /projects/sandbox/timestamp/manifest.json as a valid PWA manifest with: name 'TrustMark', short_name 'TrustMark', theme_color '#1B3A5C', background_color '#1B3A5C', display 'standalone', orientation 'portrait', start_url '.', icons array (generate simple placeholder icon references), categories ['photography', 'utilities']",
+    "Create /projects/sandbox/timestamp/sw.js service worker with: install event that caches the app shell (CDN libraries: piexifjs, leaflet, qrcode), fetch event with cache-first strategy for CDN resources and network-first for app content, activate event to clean old caches"
+  ],
+  "acceptance_criteria": [
+    "Code.gs contains a valid doGet() function that returns HtmlService output",
+    "Code.gs has an include() function for template inclusion",
+    "manifest.json is valid JSON with all required PWA fields",
+    "sw.js implements install, fetch, and activate event handlers",
+    "sw.js caches CDN resources for offline use"
+  ],
+  "verification": [
+    "Run: node -e \"JSON.parse(require('fs').readFileSync('/projects/sandbox/timestamp/manifest.json','utf8')); console.log('manifest.json valid')\"",
+    "Run: node -e \"const fs=require('fs'); const code=fs.readFileSync('/projects/sandbox/timestamp/sw.js','utf8'); if(code.includes('install') && code.includes('fetch') && code.includes('activate')) console.log('sw.js valid'); else process.exit(1)\""
+  ],
+  "blocked_reason": null,
+  "findings": "All three files created and verified. Code.gs uses query parameter routing (page=manifest, page=sw) to serve manifest and service worker. manifest.json uses placeholder icon URLs. sw.js uses var declarations for broad browser compatibility."
+}

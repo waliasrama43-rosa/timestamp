@@ -1,0 +1,32 @@
+{
+  "id": "FEAT-003",
+  "type": "fix",
+  "description": "Address code review issues: canvas overlay overflow, SW/manifest paths, UserComment EXIF encoding, canvas rendering duplication, localStorage logo quota risk, QRIS tag 54 insertion fix, and manifest start_url.",
+  "status": "completed",
+  "steps": [
+    "Fix canvas overlay height to be calculated from actual content size (fontSize * lineHeight * lines + padding)",
+    "Extract overlay rendering into shared function used by both renderPreview() and doDownload()",
+    "Fix service worker registration path to use ?page=sw and manifest href to use ?page=manifest",
+    "Remove manual ASCII charset prefix from UserComment EXIF field",
+    "Add try/catch and size check around localStorage.setItem for logo",
+    "Fix QRIS tag 54 insertion to use hard-coded position before tag 55 or 58",
+    "Fix manifest.json start_url from . to ./",
+    "Add comment acknowledging client-side payment design decision"
+  ],
+  "acceptance_criteria": [
+    "Overlay height dynamically calculated from content, not from image height",
+    "Single renderOverlay function called by both renderPreview and doDownload",
+    "Manifest link uses ?page=manifest href",
+    "Service worker registers with ?page=sw path",
+    "UserComment passes raw JSON string without manual charset prefix",
+    "Logo upload rejects files over 500KB and wraps setItem in try/catch",
+    "Tag 54 inserted using hard-coded position before tag 55 or 58",
+    "manifest.json start_url is ./ with deployment note"
+  ],
+  "verification": [
+    "Run: node -e \"const fs=require('fs'); const html=fs.readFileSync('/projects/sandbox/timestamp/index.html','utf8'); const checks=['?page=manifest','?page=sw','renderOverlay','500 * 1024']; const missing=checks.filter(c=>!html.includes(c)); if(missing.length){console.error('Missing:',missing);process.exit(1)} console.log('All review fixes present')\"",
+    "Run: node -e \"JSON.parse(require('fs').readFileSync('/projects/sandbox/timestamp/manifest.json','utf8')); console.log('manifest.json valid')\""
+  ],
+  "blocked_reason": null,
+  "findings": "All 8 review issues addressed. Issues 1-6 fixed as code changes. Issue 7 (client-side payment) documented with comment as by-design. Issue 8 (start_url) changed to ./. JS syntax validated, all verification checks pass. File reduced from 51.6KB to 50.6KB due to deduplication of overlay rendering code."
+}

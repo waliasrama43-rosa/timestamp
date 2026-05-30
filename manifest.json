@@ -1,0 +1,25 @@
+{
+  "name": "TrustMark",
+  "short_name": "TrustMark",
+  "description": "Photo timestamp and watermark verification tool",
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#1B3A5C",
+  "background_color": "#1B3A5C",
+  "categories": ["photography", "utilities"],
+  "icons": [
+    {
+      "src": "https://via.placeholder.com/192x192.png?text=TM",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://via.placeholder.com/512x512.png?text=TM",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

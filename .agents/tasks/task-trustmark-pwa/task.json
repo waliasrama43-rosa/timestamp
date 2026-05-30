@@ -1,0 +1,14 @@
+{
+  "task_id": "task-trustmark-pwa",
+  "task_description": "Build TrustMark - a PWA web app on Google Apps Script for adding timemark/timestamp overlays to photos with EXIF metadata manipulation, map-based location selection, QRIS payment integration, and professional overlay rendering. All client-side processing with localStorage persistence.",
+  "status": "completed",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003"],
+  "blocked_reason": null,
+  "verification": {
+    "build": "pass",
+    "tests": "pass",
+    "test_quality": "pass",
+    "docker_build": "skipped",
+    "summary": "All files validated. Code.gs has proper GAS functions. manifest.json is valid JSON with corrected start_url. sw.js has all required event handlers. index.html (50.6KB) passes JS syntax validation and contains all required modules with review fixes applied: canvas overflow fixed, GAS paths corrected, EXIF encoding fixed, rendering deduplicated, localStorage protected, QRIS tag insertion hardened."
+  }
+}
