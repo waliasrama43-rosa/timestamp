@@ -1,0 +1,7 @@
+{
+  "task_id": "task-trustmark-pwa",
+  "task_description": "Build TrustMark - a PWA web app on Google Apps Script for adding timemark/timestamp overlays to photos with EXIF metadata manipulation, map-based location selection, QRIS payment integration, and professional overlay rendering. All client-side processing with localStorage persistence.",
+  "status": "in_progress",
+  "feature_order": ["FEAT-001", "FEAT-002"],
+  "blocked_reason": null
+}

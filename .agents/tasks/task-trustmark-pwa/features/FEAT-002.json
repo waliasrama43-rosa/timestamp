@@ -1,0 +1,46 @@
+{
+  "id": "FEAT-002",
+  "type": "feat",
+  "description": "Create the complete index.html - the main TrustMark application with all UI, logic, and functionality embedded. This is the core of the app containing: photo upload, datetime setting, map location picker, title/org inputs, logo upload, device info, verification code generation, live Canvas preview with timemark overlay, EXIF manipulation, QRIS payment system, and download functionality. All in a single HTML file with embedded CSS and JS as required by GAS.",
+  "status": "completed",
+  "steps": [
+    "Create /projects/sandbox/timestamp/index.html with the complete app structure. The file must include ALL of the following sections:",
+    "HEAD SECTION: Meta tags for PWA (viewport, theme-color, apple-mobile-web-app-capable), link to manifest.json, CDN links for: Leaflet CSS/JS (v1.9.4), piexifjs (latest from CDN), qrcode.js (for QRIS QR generation), Material Icons or Font Awesome for icons",
+    "CSS SECTION (embedded <style>): Mobile-first responsive design, color scheme: primary #1B3A5C (deep navy), accent #D4A841 (gold), success #2E7D5B (emerald), background #F5F7FA, Professional card-based layout, Bottom navigation bar for mobile, Modal/overlay styles for map picker and payment, Canvas preview styling, Form input styles matching the professional theme, Animation for loading states, Media queries for tablet (768px+) and desktop (1024px+)",
+    "HTML BODY: App header with TrustMark branding and tier badge, Main content area with scrollable cards/sections: (1) Photo Upload card - drag/drop zone, file picker button, camera capture button, (2) DateTime card - Auto button (fills current time), manual datetime-local input, timezone display (WIB/+07:00), (3) Location card - mini map preview, 'Pilih Lokasi' button to open full map modal, location name display, GPS coords display, address display, favorites list from localStorage, (4) Title & Organization card - text input for title/reference, text input for organization name, (5) Logo card - upload button, preview of current logo, stored in localStorage as base64, (6) Device Info card - auto-detected device string, editable dropdown with common Indonesian phones (Samsung, Xiaomi, Oppo, Vivo, iPhone), (7) Verification Code display - auto-generated VRF-XXXXXX format, (8) Live Preview section - Canvas element showing photo with timemark overlay rendered in real-time, (9) Download button (prominent, gold colored) with warning text, (10) Payment/upgrade banner at bottom",
+    "MAP MODAL: Full-screen modal with Leaflet map, OpenStreetMap tiles, search bar using Nominatim API, draggable marker pin, 'Gunakan Lokasi Ini' confirm button, reverse geocoding to get address from coordinates, favorites save/load from localStorage, remember last used location",
+    "PAYMENT MODAL: QRIS payment flow - show pricing tiers (Free/Basic Rp3000/day/Pro Rp15000/month), generate dynamic QRIS from static payload by inserting amount tag 54, render QR code using qrcode.js, unique amount suffix (random 2-digit code added to price), 'Saya Sudah Bayar' button, simple auto-approval using localStorage with expiry timestamp, tier badge update after payment",
+    "JAVASCRIPT - Photo Upload Module: Handle file input, drag/drop, and camera capture (mediaDevices.getUserMedia or input capture attribute), read file as DataURL using FileReader, display in canvas, trigger overlay re-render on new photo",
+    "JAVASCRIPT - DateTime Module: Auto button sets current date/time in WIB (+07:00), manual picker allows any date/time, format display as 'DD MMM YYYY' and 'HH:MM:SS WIB'",
+    "JAVASCRIPT - Location/Map Module: Initialize Leaflet map centered on Indonesia (-6.2, 106.8), Nominatim search with debounce, draggable marker, reverse geocode on marker drag end, save/load favorites from localStorage, display location name, coords, full address",
+    "JAVASCRIPT - Canvas Timemark Overlay Rendering: Draw uploaded photo on canvas, calculate overlay area at bottom (proportional to image size), draw semi-transparent dark background (rgba(0,0,0,0.65)), Render text lines: Line 1 (Gold #D4A841): calendar icon + 'DD Bulan YYYY' | clock icon + 'HH:MM:SS WIB' | pin icon + location name, Line 2 (White): GPS coordinates formatted as 'Lat: -X.XXXXXX, Long: X.XXXXXX', Line 3 (White): Full address from reverse geocoding, Line 4 (White): Title/reference text, Line 5: Organization logo (left side, scaled), Verified badge + 'VRF-XXXXXX' code (right side, green badge), Font: use bold for line 1, regular for others, scale font size proportional to image width, Add free-tier watermark 'TrustMark' in corner if user is on free plan",
+    "JAVASCRIPT - EXIF Module using piexifjs: On download, read original EXIF from uploaded photo (if any), modify/set: DateTime + DateTimeOriginal + DateTimeDigitized (from user datetime input formatted as 'YYYY:MM:DD HH:MM:SS'), OffsetTimeOriginal ('+07:00' or based on selected timezone), GPSLatitude + GPSLongitude + GPSLatitudeRef + GPSLongitudeRef (from map coordinates, converted to degrees/minutes/seconds format), Make and Model (from device info selection), Software: 'TrustMark v1.0', Artist: 'TrustMark', ImageUniqueID: generated UUID, UserComment: JSON encoded validation payload with VRF code and timestamp, Insert modified EXIF back into the JPEG before download",
+    "JAVASCRIPT - Verification Code: Generate random 6-character alphanumeric code prefixed with 'VRF-', generate new code for each photo session, display with verified checkmark icon",
+    "JAVASCRIPT - QRIS Payment Module: Parse static QRIS payload string, implement TLV (Tag-Length-Value) parser for QRIS format, insert/modify tag 54 (transaction amount) with the price + random unique suffix, regenerate CRC (tag 63) using CRC-CCITT algorithm, generate QR code from modified payload string, localStorage-based subscription: store {tier, expiry, amount_paid} object, check subscription on app load, enforce limits (2 photos/day for free tier)",
+    "JAVASCRIPT - Download Module: Render final canvas at full resolution, convert canvas to blob, inject modified EXIF into blob using piexifjs, create download link with filename format 'TrustMark_YYYY-MM-DD_HHMMSS.jpg', show warning modal before download reminding user photo will be lost",
+    "JAVASCRIPT - PWA Registration: Register service worker on page load, handle install prompt event for 'Add to Home Screen' button",
+    "JAVASCRIPT - Initialization: On DOMContentLoaded: register SW, check subscription tier, load favorites from localStorage, load saved logo from localStorage, auto-detect device info, generate initial VRF code, set default datetime to now"
+  ],
+  "acceptance_criteria": [
+    "index.html is a valid, self-contained HTML file under 500KB",
+    "All CSS is embedded in <style> tags within the file",
+    "All JavaScript is embedded in <script> tags within the file",
+    "CDN libraries are referenced: piexifjs, leaflet, qrcode",
+    "The UI has all 10 functional sections described above",
+    "Canvas-based timemark overlay renders with correct color scheme (gold line 1, white lines 2-5)",
+    "EXIF manipulation code uses piexifjs to read/modify/write EXIF data",
+    "QRIS payment generates dynamic payload with CRC recalculation",
+    "Map integration uses Leaflet with OpenStreetMap tiles and Nominatim geocoding",
+    "All text/labels are in Indonesian language",
+    "Responsive design works for mobile (360px+), tablet (768px+), desktop (1024px+)",
+    "localStorage is used for: favorites, logo, subscription, last location",
+    "Free tier enforces 2 photos/day limit and adds watermark",
+    "Download produces JPEG with modified EXIF metadata"
+  ],
+  "verification": [
+    "Run: node -e \"const fs=require('fs'); const html=fs.readFileSync('/projects/sandbox/timestamp/index.html','utf8'); const checks=['piexif','leaflet','qrcode','Canvas','localStorage','navigator.userAgent','VRF-','#D4A841','#1B3A5C','QRIS','Nominatim']; const missing=checks.filter(c=>!html.includes(c)); if(missing.length) { console.error('Missing:',missing); process.exit(1); } console.log('All key elements present'); console.log('File size:', (Buffer.byteLength(html)/1024).toFixed(1)+'KB')\"",
+    "Run: node -e \"const fs=require('fs'); const html=fs.readFileSync('/projects/sandbox/timestamp/index.html','utf8'); if(!html.includes('doGet') && html.includes('<html') && html.includes('</html>')) console.log('Valid HTML structure'); else if(html.includes('<html') && html.includes('</html>')) console.log('Valid HTML structure'); else { console.error('Invalid HTML'); process.exit(1); }\""
+  ],
+  "blocked_reason": null,
+  "findings": "All 36 element checks passed. File is 51.6KB (well under 500KB limit). JavaScript syntax validated with new Function(). All key integrations present: piexifjs for EXIF, Leaflet for maps, QRCode for QRIS, Canvas API for overlay rendering, Nominatim for geocoding. QRIS uses the static payload with TLV parser and CRC-CCITT recalculation. Free tier enforces 2 photos/day via localStorage counter with date check."
+}
