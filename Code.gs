@@ -3,7 +3,12 @@
  * Google Apps Script Backend
  */
 
-/** TrustMark 192x192 SVG icon */
+/**
+ * TrustMark 192x192 SVG icon.
+ * NOTE: Some older Android WebViews (pre-Chromium 92) may not render SVG manifest icons
+ * and will fall back to the browser's generic app icon. Raster PNG fallback could be
+ * added in a future iteration if needed.
+ */
 var ICON_SVG_192 = '<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">'
   + '<rect width="192" height="192" rx="19.2" ry="19.2" fill="#1B3A5C"/>'
   + '<path d="M96 32 L144 56 L144 104 Q144 140 96 160 Q48 140 48 104 L48 56 Z" fill="#D4A841"/>'
@@ -59,7 +64,9 @@ function doGet(e) {
 
 /**
  * Handles API requests routed via ?page=api&action=...
- * Returns JSON responses via ContentService.
+ * Only read-only actions are exposed via GET to prevent CSRF.
+ * State-mutating operations (activateSubscription, validatePayment) are only
+ * accessible via google.script.run which has built-in CSRF protection.
  * @param {Object} e - The event object from a GET request.
  * @return {TextOutput} JSON response.
  */
@@ -71,17 +78,6 @@ function handleApiRequest(e) {
     switch (action) {
       case 'checkSubscription':
         result = { success: true, data: checkSubscription() };
-        break;
-      case 'activateSubscription':
-        var tier = e.parameter.tier;
-        var amount = e.parameter.amount;
-        result = { success: true, data: activateSubscription(tier, Number(amount)) };
-        break;
-      case 'validatePayment':
-        var pTier = e.parameter.tier;
-        var pAmount = e.parameter.amount;
-        var pTxId = e.parameter.transactionId || null;
-        result = { success: true, data: validatePayment(pTier, Number(pAmount), pTxId) };
         break;
       default:
         result = { success: false, error: 'Unknown action: ' + action };

@@ -64,6 +64,8 @@ function getSubscriptionStatus() {
 /**
  * Activates a subscription for the current user.
  * Validates tier and amount before storing.
+ * Prevents replay by checking if user already has an active subscription
+ * for the same or higher tier.
  * @param {string} tier - The subscription tier ('basic' or 'pro')
  * @param {number} amount - The amount paid
  * @return {Object} The activated subscription object
@@ -80,6 +82,18 @@ function activateSubscription(tier, amount) {
   var numAmount = Number(amount);
   if (isNaN(numAmount) || numAmount < config.amount || numAmount > config.amount + PAYMENT_VARIANCE) {
     throw new Error('Invalid payment amount for tier ' + tier + ': ' + amount);
+  }
+
+  // Replay protection: check if user already has an active subscription
+  // for the same or higher tier
+  var existingSub = checkSubscription();
+  if (existingSub && existingSub.active) {
+    var tierRank = { basic: 1, pro: 2 };
+    var existingRank = tierRank[existingSub.tier] || 0;
+    var requestedRank = tierRank[tier] || 0;
+    if (existingRank >= requestedRank) {
+      throw new Error('User already has an active ' + existingSub.tier + ' subscription (expires ' + new Date(existingSub.expiry).toISOString() + ')');
+    }
   }
 
   var email = Session.getActiveUser().getEmail();
@@ -241,20 +255,29 @@ function savePhotoToDrive(base64Data, filename, metadata) {
 
 /**
  * Lists saved photos from the TrustMark Drive folder with pagination.
+ * Requires an active Pro subscription.
+ * Limits file iteration to prevent GAS execution timeout.
  * @param {number} page - Page number (1-based), default 1
  * @param {number} pageSize - Number of items per page, default 12
  * @return {Array} Array of photo objects: { id, name, url, thumbnailUrl, createdDate, description }
  */
 function getPhotoHistory(page, pageSize) {
+  // Verify Pro subscription
+  var sub = checkSubscription();
+  if (!sub || !sub.active || sub.tier !== 'pro') {
+    throw new Error('Photo history requires an active Pro subscription');
+  }
+
   page = page || 1;
   pageSize = pageSize || 12;
 
   var folder = getTrustMarkFolder();
   var files = folder.getFilesByType('image/jpeg');
 
-  // Collect all files
+  // Collect files with a hard limit to prevent GAS timeout
+  var MAX_FILES = 100;
   var allFiles = [];
-  while (files.hasNext()) {
+  while (files.hasNext() && allFiles.length < MAX_FILES) {
     allFiles.push(files.next());
   }
 
@@ -285,11 +308,18 @@ function getPhotoHistory(page, pageSize) {
 
 /**
  * Deletes a photo from the TrustMark Drive folder.
+ * Requires an active Pro subscription.
  * Verifies the file is actually in the TrustMark folder before deletion.
  * @param {string} fileId - The Google Drive file ID to delete
  * @return {Object} Success indicator: { success: true }
  */
 function deletePhotoFromDrive(fileId) {
+  // Verify Pro subscription
+  var sub = checkSubscription();
+  if (!sub || !sub.active || sub.tier !== 'pro') {
+    throw new Error('Deleting photos requires an active Pro subscription');
+  }
+
   var folder = getTrustMarkFolder();
   var file = DriveApp.getFileById(fileId);
 
@@ -313,14 +343,17 @@ function deletePhotoFromDrive(fileId) {
 
 /**
  * Returns basic storage info for the TrustMark folder.
+ * Limits file iteration to prevent GAS execution timeout.
  * @return {Object} Storage info: { photoCount, folderUrl }
  */
 function getStorageInfo() {
   var folder = getTrustMarkFolder();
   var files = folder.getFilesByType('image/jpeg');
 
+  // Count with a hard limit to prevent GAS timeout
+  var MAX_COUNT = 100;
   var count = 0;
-  while (files.hasNext()) {
+  while (files.hasNext() && count < MAX_COUNT) {
     files.next();
     count++;
   }

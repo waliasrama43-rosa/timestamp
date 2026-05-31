@@ -1423,18 +1423,15 @@ select.form-control { appearance: none; background: var(--white) url("data:image
           alert('Terima kasih! Paket ' + serverSub.tier.charAt(0).toUpperCase() + serverSub.tier.slice(1) + ' aktif.');
         })
         .withFailureHandler(function(err) {
-          // Fallback to localStorage on server error
-          saveSubscription(selectedTier, paymentAmount);
+          // Server rejected or error - do NOT activate locally.
+          // Show error message to user.
           btnConfirm.disabled = false;
           btnConfirm.innerHTML = originalText;
-          $('paymentModal').classList.remove('active');
-          updateDailyCounter();
-          renderPreview();
-          alert('Terima kasih! Paket ' + selectedTier.charAt(0).toUpperCase() + selectedTier.slice(1) + ' aktif.');
+          alert('Gagal mengaktifkan langganan: ' + (err && err.message ? err.message : 'Terjadi kesalahan server. Silakan coba lagi.'));
         })
         .activateSubscription(selectedTier, paymentAmount);
     } else {
-      // Not in GAS environment - localStorage only
+      // Not in GAS environment - localStorage only (offline/dev mode)
       saveSubscription(selectedTier, paymentAmount);
       btnConfirm.disabled = false;
       btnConfirm.innerHTML = originalText;
@@ -1617,19 +1614,31 @@ select.form-control { appearance: none; background: var(--white) url("data:image
     photos.forEach(function(photo) {
       var item = document.createElement('div');
       item.className = 'cloud-photo-item';
-      item.innerHTML = '<img src="' + (photo.thumbnailUrl || '') + '" alt="' + photo.name + '" onerror="this.style.display=\'none\'">'
-        + '<div class="cloud-photo-name">' + photo.name + '</div>'
-        + '<button class="cloud-photo-del" data-id="' + photo.id + '">&times;</button>';
 
-      item.querySelector('img').addEventListener('click', function() {
+      // Use safe DOM APIs to prevent XSS from filenames
+      var img = document.createElement('img');
+      img.setAttribute('src', photo.thumbnailUrl || '');
+      img.setAttribute('alt', photo.name || '');
+      img.addEventListener('error', function() { this.style.display = 'none'; });
+      img.addEventListener('click', function() {
         if (photo.url) window.open(photo.url, '_blank');
       });
 
-      item.querySelector('.cloud-photo-del').addEventListener('click', function(e) {
+      var nameDiv = document.createElement('div');
+      nameDiv.className = 'cloud-photo-name';
+      nameDiv.textContent = photo.name || '';
+
+      var delBtn = document.createElement('button');
+      delBtn.className = 'cloud-photo-del';
+      delBtn.textContent = '\u00D7';
+      delBtn.addEventListener('click', function(e) {
         e.stopPropagation();
         if (confirm('Hapus foto ini dari Drive?')) deleteCloudPhoto(photo.id);
       });
 
+      item.appendChild(img);
+      item.appendChild(nameDiv);
+      item.appendChild(delBtn);
       grid.appendChild(item);
     });
   }
