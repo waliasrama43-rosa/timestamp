@@ -295,6 +295,10 @@ select.form-control { appearance: none; background: var(--white) url("data:image
   </style>
 </head>
 <body>
+  <div id="appLoader" style="position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:12px;">
+    <div class="spinner" style="width:32px;height:32px;"></div>
+    <p style="font-size:13px;color:var(--text-light);">Memuat TrustMark...</p>
+  </div>
   <header class="app-header">
     <h1>TrustMark</h1>
     <span class="tier-badge" id="tierBadge">FREE</span>
@@ -601,6 +605,10 @@ loadScripts();
 function initApp() {
 'use strict';
 
+  // Remove loading overlay
+  var loader = document.getElementById('appLoader');
+  if (loader) loader.parentNode.removeChild(loader);
+
   // ==================== STATE ====================
   var state = {
     photoDataURL: null,
@@ -864,11 +872,12 @@ function initApp() {
     zone.addEventListener('click', function() { fileInput.click(); });
     $('btnPickFile').addEventListener('click', function() { fileInput.click(); });
     $('btnCamera').addEventListener('click', function() {
-      // Check if getUserMedia is available (laptop/desktop)
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      // Detect if likely mobile device via user agent
+      var isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      if (!isMobile && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         openCameraModal();
       } else {
-        // Fallback: use file input with capture (mobile)
+        // Mobile: use native camera picker for better UX (handles orientation, EXIF, etc.)
         cameraInput.click();
       }
     });
@@ -962,6 +971,10 @@ function initApp() {
 
   // ==================== LOCATION / MAP ====================
   function initLocation() {
+    if (typeof L === 'undefined') {
+      $('miniMap').innerHTML = '<p style="padding:10px;text-align:center;color:var(--text-light);font-size:12px;">Peta tidak tersedia</p>';
+      return;
+    }
     // Mini map (non-interactive preview)
     miniMap = L.map('miniMap', { zoomControl: false, dragging: false, scrollWheelZoom: false, attributionControl: false }).setView([-6.2, 106.8], 5);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(miniMap);
@@ -989,6 +1002,10 @@ function initApp() {
   }
 
   function openMapModal() {
+    if (typeof L === 'undefined') {
+      alert('Peta tidak tersedia. Periksa koneksi internet.');
+      return;
+    }
     $('mapModal').classList.add('active');
     setTimeout(function() {
       if (!fullMap) {

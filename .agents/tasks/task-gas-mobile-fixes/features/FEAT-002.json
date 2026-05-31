@@ -1,0 +1,26 @@
+{
+  "id": "FEAT-002",
+  "type": "fix",
+  "description": "Address 3 critical review issues: getUserMedia mobile detection, Leaflet crash guard, and loading overlay",
+  "status": "completed",
+  "steps": [
+    "Step 1 - Fix getUserMedia detection to use mobile UA check instead of pure capability detection, so mobile users get native camera picker",
+    "Step 2 - Guard initLocation() and openMapModal() against Leaflet CDN failure with typeof L check",
+    "Step 3 - Add loading overlay that displays while CDN scripts load and is removed when initApp() runs"
+  ],
+  "acceptance_criteria": [
+    "Camera button uses UA-based mobile detection to decide between getUserMedia modal and native file input",
+    "initLocation() gracefully handles missing Leaflet library without crashing",
+    "openMapModal() shows an alert and returns if Leaflet is not available",
+    "A loading overlay with spinner is shown until initApp() runs",
+    "ES5 syntax maintained throughout"
+  ],
+  "verification": [
+    "grep for isMobile regex in camera button handler",
+    "grep for typeof L === 'undefined' in initLocation and openMapModal",
+    "grep for appLoader in HTML body and in initApp function",
+    "Verify HTML structure is valid (balanced tags)"
+  ],
+  "blocked_reason": null,
+  "findings": "All 3 review issues addressed: (1) getUserMedia now gated behind UA-based mobile detection so mobile users get native camera picker, (2) initLocation and openMapModal guarded with typeof L check to prevent crash if Leaflet CDN fails, (3) loading overlay added that shows spinner until initApp runs. JS braces verified balanced (244/244). HTML div tags balanced (77/77)."
+}
