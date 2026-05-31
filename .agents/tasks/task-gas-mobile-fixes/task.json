@@ -1,7 +1,7 @@
 {
   "task_id": "task-gas-mobile-fixes",
   "task_description": "Fix 6 critical issues with TrustMark GAS web app deployment: (1) mobile unable to open due to GAS HtmlService stripping script src tags, (2) mini map not showing (related to #1), (3) need logo position controls, (4) VRF code should be center-right small gold, (5) payment QR not showing (related to #1), (6) camera not working on laptop. Root cause of issues 1/2/5 is that GAS strips static script tags on mobile - fix by using dynamic script loading.",
-  "status": "in_progress",
+  "status": "completed",
   "feature_order": ["FEAT-001", "FEAT-002"],
   "blocked_reason": null,
   "verification": {
