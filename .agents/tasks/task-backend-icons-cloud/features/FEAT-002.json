@@ -1,0 +1,30 @@
+{
+  "id": "FEAT-002",
+  "type": "feat",
+  "description": "Generate custom PWA icons matching TrustMark branding (navy #1B3A5C background, gold #D4A841 'TM' text/shield motif) as SVG and PNG files. Update manifest.json to reference the new icons served via Code.gs. Update Code.gs to serve the icon files.",
+  "status": "completed",
+  "steps": [
+    "Create a Node.js script (generate-icons.js) that generates TrustMark branded icons. The icon design: navy (#1B3A5C) rounded-rectangle background, gold (#D4A841) shield/badge shape in center with 'TM' text. Generate both 192x192 and 512x512 PNG files. Use the 'canvas' npm package (@napi-rs/canvas or node-canvas) for rendering.",
+    "Create icons/icon-192.svg and icons/icon-512.svg as inline SVG files that can be embedded in Code.gs. The SVG design: navy background rect with rounded corners, gold shield path, white 'TM' text centered. SVGs should be self-contained (no external refs).",
+    "Run generate-icons.js to produce icons/icon-192.png and icons/icon-512.png from the SVG designs.",
+    "Update Code.gs doGet() to serve icons: add cases for page=icon-192 and page=icon-512. For SVG icons, serve them as ContentService.createTextOutput with MimeType.XML. For a simpler approach, encode the SVG icons as data and serve them inline.",
+    "Update manifest.json to reference the icons via GAS query params: src becomes '?page=icon-192' for 192x192 and '?page=icon-512' for 512x512. Keep purpose as 'any maskable'. Update the type to 'image/svg+xml' or 'image/png' depending on which format is served.",
+    "As a fallback approach (since GAS cannot serve binary PNG directly via ContentService easily), embed the SVG icons as inline data in manifest.json using data: URIs, OR serve the SVG via ContentService with MimeType.XML and update manifest to reference ?page=icon-192 and ?page=icon-512.",
+    "Create a dedicated icons.html file (GAS HTML file) that contains the SVG icon markup, referenced by Code.gs to serve icon content. This follows the same pattern as manifest.json and sw.js being served as separate 'HTML files' in the GAS project."
+  ],
+  "acceptance_criteria": [
+    "SVG icon files exist with TrustMark branding (navy background, gold accent, TM text)",
+    "manifest.json references the new icons instead of via.placeholder.com",
+    "Code.gs can serve the icon content via query parameter",
+    "Icons are 192x192 and 512x512 sizes",
+    "Icon design uses the brand colors: primary #1B3A5C and accent #D4A841"
+  ],
+  "verification": [
+    "Validate manifest.json is valid JSON: node -e \"JSON.parse(require('fs').readFileSync('manifest.json','utf8')); console.log('manifest.json valid')\"",
+    "Validate SVG files are well-formed XML",
+    "Confirm manifest.json no longer references via.placeholder.com",
+    "Confirm Code.gs includes icon serving logic"
+  ],
+  "blocked_reason": null,
+  "findings": "SVG icons embedded directly as string constants in Code.gs for serving via ContentService.MimeType.XML. Standalone SVG files also created at project root for reference. The generate-icons.js script for PNG generation was skipped since GAS ContentService cannot serve binary PNG easily and SVG is the better approach for this use case. All verification passed: valid JSON manifest, valid SVG markup, Code.gs syntax valid with mocked GAS globals."
+}

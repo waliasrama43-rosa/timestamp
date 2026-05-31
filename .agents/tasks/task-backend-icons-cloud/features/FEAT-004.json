@@ -1,0 +1,31 @@
+{
+  "id": "FEAT-004",
+  "type": "fix",
+  "description": "Address 7 security and robustness issues identified in code review: CSRF via GET API, replay protection gap, failure handler grants subscription, stored XSS in cloud photo grid, unbounded file enumeration, missing tier check on read/delete, and SVG icon compatibility note.",
+  "status": "completed",
+  "steps": [
+    "Remove state-mutating actions (activateSubscription, validatePayment) from the GET API route in Code.gs. Keep only checkSubscription as read-only.",
+    "Add replay protection to activateSubscription in BackendService.gs: check that the user does not already have an active subscription for the same or higher tier before activating.",
+    "Fix the withFailureHandler in confirmPayment() in index.html: only fall back to localStorage when not in GAS environment. If google.script.run IS available but fails, show an error and do NOT activate locally.",
+    "Fix renderCloudPhotos in index.html to use DOM APIs (createElement, textContent, setAttribute) instead of innerHTML with unsanitized photo.name.",
+    "Add an iterator limit (max 100 files) to getPhotoHistory and getStorageInfo in BackendService.gs to prevent GAS timeout.",
+    "Add subscription validation (Pro tier check) at the start of getPhotoHistory and deletePhotoFromDrive in BackendService.gs.",
+    "Add a comment in Code.gs noting SVG icon compatibility with older WebViews."
+  ],
+  "acceptance_criteria": [
+    "Code.gs handleApiRequest no longer routes to activateSubscription or validatePayment",
+    "activateSubscription checks for existing active subscription before activating",
+    "confirmPayment failure handler shows error instead of activating when in GAS environment",
+    "renderCloudPhotos uses textContent and setAttribute instead of innerHTML",
+    "getPhotoHistory and getStorageInfo have a max file iteration limit",
+    "getPhotoHistory and deletePhotoFromDrive verify Pro subscription",
+    "SVG icon compatibility comment exists in Code.gs"
+  ],
+  "verification": [
+    "Validate Code.gs syntax",
+    "Validate BackendService.gs syntax",
+    "Validate index.html JS syntax"
+  ],
+  "blocked_reason": null,
+  "findings": "All 7 review issues addressed. Syntax validation passed for all 3 modified files (Code.gs, BackendService.gs, index.html). Structural checks confirmed: no state-mutating actions in GET API, replay protection present, failure handler shows error instead of activating, DOM APIs used for photo grid, iterator limits in place, tier checks added, SVG note added."
+}

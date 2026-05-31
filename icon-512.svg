@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="51.2" ry="51.2" fill="#1B3A5C"/>
+  <path d="M256 85 L384 149 L384 277 Q384 373 256 427 Q128 373 128 277 L128 149 Z" fill="#D4A841"/>
+  <text x="256" y="314" text-anchor="middle" font-family="Arial, sans-serif" font-size="128" font-weight="bold" fill="#FFFFFF">TM</text>
+</svg>

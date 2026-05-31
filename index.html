@@ -243,6 +243,56 @@ select.form-control { appearance: none; background: var(--white) url("data:image
   .bottom-nav { display: none; }
   .app-header { padding: 16px 40px; }
 }
+.cloud-photo-item {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  cursor: pointer;
+}
+.cloud-photo-item img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+.cloud-photo-item .cloud-photo-name {
+  font-size: 10px;
+  padding: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-light);
+}
+.cloud-photo-item .cloud-photo-del {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(255,0,0,0.8);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 12px;
+  cursor: pointer;
+  display: none;
+}
+.cloud-photo-item:hover .cloud-photo-del { display: block; }
+.cloud-toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--success);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  z-index: 2000;
+  animation: fadeInUp 0.3s ease;
+}
+@keyframes fadeInUp { from { opacity:0; transform:translate(-50%,10px); } to { opacity:1; transform:translate(-50%,0); } }
 .hidden { display: none !important; }
   </style>
 </head>
@@ -374,6 +424,20 @@ select.form-control { appearance: none; background: var(--white) url("data:image
       <p id="dailyCounter" style="font-size:11px;color:var(--text-light);margin-top:4px;"></p>
     </div>
 
+    <!-- Cloud Storage (Pro only) -->
+    <div class="card" id="cardCloud" style="display:none;">
+      <div class="card-title"><span class="material-icons">cloud</span> Cloud Storage</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
+          <input type="checkbox" id="chkAutoSave"> Auto-save ke Google Drive
+        </label>
+        <span id="cloudPhotoCount" style="font-size:11px;color:var(--text-light);"></span>
+      </div>
+      <button class="btn btn-outline btn-sm" id="btnViewHistory" style="margin-top:10px;">
+        <span class="material-icons">photo_library</span> Riwayat Foto
+      </button>
+    </div>
+
     <!-- Payment Banner -->
     <div class="payment-banner" id="paymentBanner">
       <h3>Tingkatkan ke Pro</h3>
@@ -435,7 +499,7 @@ select.form-control { appearance: none; background: var(--white) url("data:image
           <h4>Pro</h4>
           <div class="price">Rp 15.000</div>
           <div class="period">per bulan</div>
-          <ul><li>Unlimited foto</li><li>Tanpa watermark</li><li>Logo kustom</li><li>Favorit lokasi</li><li>Prioritas dukungan</li></ul>
+          <ul><li>Unlimited foto</li><li>Tanpa watermark</li><li>Logo kustom</li><li>Favorit lokasi</li><li>Simpan ke Google Drive</li><li>Prioritas dukungan</li></ul>
         </div>
       </div>
       <div id="qrisSection" class="hidden">
@@ -461,6 +525,23 @@ select.form-control { appearance: none; background: var(--white) url("data:image
       <button class="btn btn-accent btn-block" id="btnConfirmDownload">
         <span class="material-icons">download</span> Unduh Sekarang
       </button>
+    </div>
+  </div>
+
+  <!-- Cloud Storage Modal -->
+  <div class="modal-overlay" id="cloudModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Riwayat Foto (Drive)</h2>
+        <button class="modal-close" id="btnCloseCloud">&times;</button>
+      </div>
+      <div id="cloudPhotoGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;max-height:60vh;overflow-y:auto;"></div>
+      <div id="cloudLoading" class="hidden" style="text-align:center;padding:20px;"><div class="spinner"></div></div>
+      <div id="cloudEmpty" class="hidden" style="text-align:center;padding:20px;color:var(--text-light);">Belum ada foto tersimpan</div>
+      <div style="display:flex;justify-content:center;gap:8px;margin-top:12px;">
+        <button class="btn btn-outline btn-sm" id="btnCloudPrev" disabled>&laquo; Sebelumnya</button>
+        <button class="btn btn-outline btn-sm" id="btnCloudNext">Selanjutnya &raquo;</button>
+      </div>
     </div>
   </div>
 
@@ -590,6 +671,63 @@ select.form-control { appearance: none; background: var(--white) url("data:image
     updateTierUI();
   }
 
+  /**
+   * Checks if google.script.run is available (running inside GAS context).
+   */
+  function isGASEnvironment() {
+    return (typeof google !== 'undefined' && google.script && google.script.run);
+  }
+
+  /**
+   * Syncs subscription state from server response.
+   * Server wins if there is a conflict (server is source of truth).
+   * @param {Object|null} serverSub - Subscription object from server
+   */
+  function syncSubscriptionFromServer(serverSub) {
+    if (!serverSub) {
+      // No server subscription - keep local if still valid
+      return;
+    }
+
+    if (serverSub.active) {
+      // Server has active subscription - update local
+      var sub = {
+        tier: serverSub.tier,
+        expiry: serverSub.expiry,
+        amount_paid: serverSub.amount_paid || 0,
+        activated: serverSub.activated_at || Date.now(),
+        transaction_id: serverSub.transaction_id || null
+      };
+      localStorage.setItem('trustmark_subscription', JSON.stringify(sub));
+      state.tier = serverSub.tier;
+      state.subscription = sub;
+    } else {
+      // Server subscription expired - clear local
+      state.tier = 'free';
+      state.subscription = null;
+      localStorage.removeItem('trustmark_subscription');
+    }
+    updateTierUI();
+    updateDailyCounter();
+    renderPreview();
+  }
+
+  /**
+   * Loads subscription from server on app start.
+   * Falls back silently if not in GAS environment.
+   */
+  function loadSubscriptionFromServer() {
+    if (!isGASEnvironment()) return;
+    try {
+      google.script.run
+        .withSuccessHandler(syncSubscriptionFromServer)
+        .withFailureHandler(function() { /* silent fallback to localStorage */ })
+        .checkSubscription();
+    } catch(e) {
+      // Not in GAS environment, use localStorage only
+    }
+  }
+
   function updateTierUI() {
     var badge = $('tierBadge');
     badge.textContent = state.tier.toUpperCase();
@@ -600,6 +738,8 @@ select.form-control { appearance: none; background: var(--white) url("data:image
     var banner = $('paymentBanner');
     if (state.tier !== 'free') banner.style.display = 'none';
     else banner.style.display = 'block';
+
+    updateCloudVisibility();
   }
 
   function getDailyCount() {
@@ -1262,11 +1402,44 @@ select.form-control { appearance: none; background: var(--white) url("data:image
 
   function confirmPayment() {
     if (!selectedTier) return;
-    saveSubscription(selectedTier, paymentAmount);
-    $('paymentModal').classList.remove('active');
-    updateDailyCounter();
-    renderPreview();
-    alert('Terima kasih! Paket ' + selectedTier.charAt(0).toUpperCase() + selectedTier.slice(1) + ' aktif.');
+
+    // Show loading state on button
+    var btnConfirm = $('btnConfirmPay');
+    var originalText = btnConfirm.innerHTML;
+    btnConfirm.disabled = true;
+    btnConfirm.innerHTML = '<span class="spinner" style="width:16px;height:16px;border-width:2px;display:inline-block;vertical-align:middle;"></span> Memproses...';
+
+    if (isGASEnvironment()) {
+      // Server-side activation (preferred)
+      google.script.run
+        .withSuccessHandler(function(serverSub) {
+          // Save locally as cache
+          saveSubscription(serverSub.tier, serverSub.amount_paid);
+          btnConfirm.disabled = false;
+          btnConfirm.innerHTML = originalText;
+          $('paymentModal').classList.remove('active');
+          updateDailyCounter();
+          renderPreview();
+          alert('Terima kasih! Paket ' + serverSub.tier.charAt(0).toUpperCase() + serverSub.tier.slice(1) + ' aktif.');
+        })
+        .withFailureHandler(function(err) {
+          // Server rejected or error - do NOT activate locally.
+          // Show error message to user.
+          btnConfirm.disabled = false;
+          btnConfirm.innerHTML = originalText;
+          alert('Gagal mengaktifkan langganan: ' + (err && err.message ? err.message : 'Terjadi kesalahan server. Silakan coba lagi.'));
+        })
+        .activateSubscription(selectedTier, paymentAmount);
+    } else {
+      // Not in GAS environment - localStorage only (offline/dev mode)
+      saveSubscription(selectedTier, paymentAmount);
+      btnConfirm.disabled = false;
+      btnConfirm.innerHTML = originalText;
+      $('paymentModal').classList.remove('active');
+      updateDailyCounter();
+      renderPreview();
+      alert('Terima kasih! Paket ' + selectedTier.charAt(0).toUpperCase() + selectedTier.slice(1) + ' aktif.');
+    }
   }
 
 
@@ -1335,6 +1508,9 @@ select.form-control { appearance: none; background: var(--white) url("data:image
     URL.revokeObjectURL(url);
 
     incrementDailyCount();
+
+    // Auto-save to Google Drive for Pro users
+    saveToCloudAfterDownload(jpegDataURL, filename);
   }
 
   // ==================== PWA / SERVICE WORKER ====================
@@ -1359,10 +1535,171 @@ select.form-control { appearance: none; background: var(--white) url("data:image
     });
   }
 
+  // ==================== CLOUD STORAGE ====================
+  var cloudPage = 1;
+  var CLOUD_PAGE_SIZE = 12;
+
+  function initCloudStorage() {
+    // Load auto-save preference
+    var autoSave = localStorage.getItem('trustmark_autosave_drive');
+    if (autoSave === 'true') $('chkAutoSave').checked = true;
+
+    $('chkAutoSave').addEventListener('change', function() {
+      localStorage.setItem('trustmark_autosave_drive', this.checked ? 'true' : 'false');
+    });
+
+    $('btnViewHistory').addEventListener('click', openCloudModal);
+    $('btnCloseCloud').addEventListener('click', function() { $('cloudModal').classList.remove('active'); });
+    $('btnCloudPrev').addEventListener('click', function() { if (cloudPage > 1) { cloudPage--; loadCloudPhotos(); } });
+    $('btnCloudNext').addEventListener('click', function() { cloudPage++; loadCloudPhotos(); });
+
+    // Show/hide cloud card based on tier
+    updateCloudVisibility();
+
+    // Load photo count if Pro
+    if (state.tier === 'pro') loadCloudInfo();
+  }
+
+  function updateCloudVisibility() {
+    var card = $('cardCloud');
+    if (state.tier === 'pro') card.style.display = 'block';
+    else card.style.display = 'none';
+  }
+
+  function loadCloudInfo() {
+    if (!isGASEnvironment()) return;
+    google.script.run
+      .withSuccessHandler(function(info) {
+        if (info) $('cloudPhotoCount').textContent = info.photoCount + ' foto tersimpan';
+      })
+      .withFailureHandler(function() {})
+      .getStorageInfo();
+  }
+
+  function openCloudModal() {
+    $('cloudModal').classList.add('active');
+    cloudPage = 1;
+    loadCloudPhotos();
+  }
+
+  function loadCloudPhotos() {
+    if (!isGASEnvironment()) return;
+    $('cloudLoading').classList.remove('hidden');
+    $('cloudPhotoGrid').innerHTML = '';
+    $('cloudEmpty').classList.add('hidden');
+
+    google.script.run
+      .withSuccessHandler(renderCloudPhotos)
+      .withFailureHandler(function(err) {
+        $('cloudLoading').classList.add('hidden');
+        var grid = $('cloudPhotoGrid');
+        grid.innerHTML = '';
+        var p = document.createElement('p');
+        p.style.color = 'red';
+        p.style.textAlign = 'center';
+        p.textContent = 'Gagal memuat: ' + (err && err.message ? err.message : 'Terjadi kesalahan');
+        grid.appendChild(p);
+      })
+      .getPhotoHistory(cloudPage, CLOUD_PAGE_SIZE);
+  }
+
+  function renderCloudPhotos(photos) {
+    $('cloudLoading').classList.add('hidden');
+    var grid = $('cloudPhotoGrid');
+    grid.innerHTML = '';
+
+    if (!photos || photos.length === 0) {
+      $('cloudEmpty').classList.remove('hidden');
+      $('btnCloudNext').disabled = true;
+      return;
+    }
+
+    $('btnCloudPrev').disabled = (cloudPage <= 1);
+    $('btnCloudNext').disabled = (photos.length < CLOUD_PAGE_SIZE);
+
+    photos.forEach(function(photo) {
+      var item = document.createElement('div');
+      item.className = 'cloud-photo-item';
+
+      // Use safe DOM APIs to prevent XSS from filenames
+      var img = document.createElement('img');
+      img.setAttribute('src', photo.thumbnailUrl || '');
+      img.setAttribute('alt', photo.name || '');
+      img.addEventListener('error', function() { this.style.display = 'none'; });
+      img.addEventListener('click', function() {
+        if (photo.url) window.open(photo.url, '_blank');
+      });
+
+      var nameDiv = document.createElement('div');
+      nameDiv.className = 'cloud-photo-name';
+      nameDiv.textContent = photo.name || '';
+
+      var delBtn = document.createElement('button');
+      delBtn.className = 'cloud-photo-del';
+      delBtn.textContent = '\u00D7';
+      delBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (confirm('Hapus foto ini dari Drive?')) deleteCloudPhoto(photo.id);
+      });
+
+      item.appendChild(img);
+      item.appendChild(nameDiv);
+      item.appendChild(delBtn);
+      grid.appendChild(item);
+    });
+  }
+
+  function deleteCloudPhoto(fileId) {
+    if (!isGASEnvironment()) return;
+    google.script.run
+      .withSuccessHandler(function() {
+        showCloudToast('Foto dihapus');
+        loadCloudPhotos();
+        loadCloudInfo();
+      })
+      .withFailureHandler(function(err) { alert('Gagal menghapus: ' + err.message); })
+      .deletePhotoFromDrive(fileId);
+  }
+
+  function saveToCloudAfterDownload(jpegDataURL, filename) {
+    if (state.tier !== 'pro') return;
+    if (!$('chkAutoSave').checked) return;
+    if (!isGASEnvironment()) return;
+
+    // Extract base64 data (remove data:image/jpeg;base64, prefix)
+    var base64Data = jpegDataURL.split(',')[1];
+    var metadata = {
+      location: state.location,
+      dateTime: state.dateTime ? state.dateTime.toISOString() : null,
+      title: state.title,
+      vrfCode: state.vrfCode,
+      organization: state.organization
+    };
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        showCloudToast('Tersimpan ke Google Drive');
+        loadCloudInfo();
+      })
+      .withFailureHandler(function(err) {
+        console.error('Cloud save failed:', err);
+      })
+      .savePhotoToDrive(base64Data, filename, metadata);
+  }
+
+  function showCloudToast(message) {
+    var toast = document.createElement('div');
+    toast.className = 'cloud-toast';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(function() { toast.remove(); }, 3000);
+  }
+
   // ==================== INITIALIZATION ====================
   document.addEventListener('DOMContentLoaded', function() {
     registerSW();
     loadSubscription();
+    loadSubscriptionFromServer();
     updateDailyCounter();
     initPhotoUpload();
     initDateTime();
@@ -1373,6 +1710,7 @@ select.form-control { appearance: none; background: var(--white) url("data:image
     initPayment();
     initDownload();
     initNav();
+    initCloudStorage();
 
     // Generate initial VRF code
     state.vrfCode = generateVRF();
