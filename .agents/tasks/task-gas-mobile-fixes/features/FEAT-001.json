@@ -1,0 +1,36 @@
+{
+  "id": "FEAT-001",
+  "type": "fix",
+  "description": "Fix GAS mobile loading, mini map, QR code, logo position controls, VRF styling, and laptop camera access - all in a single comprehensive update to index.html",
+  "status": "in_progress",
+  "steps": [
+    "Step 1 - Dynamic Script Loading (fixes mobile open, mini map, QR): Remove the three static <script src='...'> tags from the <head> section (leaflet.js, piexif.js, qrcode.min.js). Keep the CSS <link> tags (Leaflet CSS and Material Icons). At the very beginning of the <script> block (before the IIFE), add a loadScripts() function that dynamically creates script elements for each CDN URL, appends them to document.head, and tracks load completion. When all scripts are loaded (or errored), call initApp(). The dynamic loader pattern prevents GAS HtmlService from stripping the external script references on mobile.",
+    "Step 2 - Wrap existing IIFE as initApp(): Convert the existing (function() { 'use strict'; ... })() IIFE into a named function initApp() that gets called by the dynamic loader after all scripts load. The DOMContentLoaded listener inside should remain as-is since by the time scripts load, the DOM will already be ready. Make sure initApp is accessible from the loadScripts callback (define it in global scope or as window.initApp).",
+    "Step 3 - Add Logo Position Controls: In the Logo card (id='cardLogo'), add a dropdown/select element with id='selectLogoPosition' with options: top-left, top-right, bottom-left, bottom-right (default: bottom-left to match current behavior). Add a 'logoPosition' field to the state object (default 'bottom-left'). Wire up the select's change event to update state.logoPosition and call renderPreview().",
+    "Step 4 - Update renderOverlay() for logo position: Modify the renderOverlay() function to read state.logoPosition and draw the logo at the corresponding corner of the image (not just in the overlay bar). For top-left: draw at (padding, padding). For top-right: draw at (w - logoW - padding, padding). For bottom-left: draw at (padding, overlayY - logoH - padding). For bottom-right: draw at (w - logoW - padding, overlayY - logoH - padding). The logo should appear above the overlay, not inside it. Remove the old logo drawing from Line 5 of the overlay.",
+    "Step 5 - Fix VRF code: center-right, small, gold color: In renderOverlay(), change the VRF code rendering: color from '#2E7D5B' to '#D4A841' (gold). Position it at center-right of the overlay area (vertically centered within the overlay, horizontally near the right edge). Keep it rotated -90 degrees (vertical text) but use the gold color. Reduce font size to fontSize * 0.55 (smaller than current 0.7).",
+    "Step 6 - Fix camera for laptop (getUserMedia fallback): The current camera button triggers a hidden <input type='file' capture='environment'> which only works on mobile. Add a getUserMedia-based camera fallback: When btnCamera is clicked, first check if navigator.mediaDevices && navigator.mediaDevices.getUserMedia is available. If yes (laptop/desktop), create a modal or overlay with a <video> element showing the live camera feed, and a 'Capture' button. When capture is clicked, draw the video frame to a temporary canvas, convert to dataURL, and pass to handlePhoto logic. If getUserMedia is not available, fall back to the existing file input with capture='environment' (mobile behavior). Add the necessary HTML for the camera modal (video element, capture button, close button) and CSS styling."
+  ],
+  "acceptance_criteria": [
+    "No static <script src='...'> tags exist in the <head> section - only <link> tags for CSS remain",
+    "A loadScripts() function exists that dynamically loads leaflet.js, piexif.js, and qrcode.min.js and calls initApp() when complete",
+    "The main app initialization is wrapped in a function called initApp() that is called by the script loader",
+    "A logo position dropdown with options top-left, top-right, bottom-left, bottom-right exists in the Logo card",
+    "state.logoPosition is used in renderOverlay() to position the logo at the selected corner",
+    "VRF code in renderOverlay() uses color '#D4A841' (gold) and font size fontSize * 0.55",
+    "VRF code is positioned center-right within the overlay (vertically centered)",
+    "A camera modal/overlay exists with a video element for getUserMedia-based capture on laptop",
+    "The btnCamera click handler checks for getUserMedia availability and uses video stream on desktop",
+    "The file is valid HTML that can be opened in a browser without syntax errors"
+  ],
+  "verification": [
+    "Open /projects/sandbox/timestamp/index.html and verify no script src tags in head using grep",
+    "Verify the loadScripts function and initApp function exist in the script block",
+    "Verify the logo position select element exists in the HTML",
+    "Verify the VRF color is #D4A841 in renderOverlay",
+    "Verify getUserMedia code exists for camera fallback",
+    "Run a basic HTML syntax check to ensure no broken tags"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

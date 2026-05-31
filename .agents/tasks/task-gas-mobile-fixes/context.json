@@ -1,0 +1,16 @@
+{
+  "project_type": "Google Apps Script (GAS) web app - single-page HTML with inline JS",
+  "language": "HTML/CSS/JavaScript (vanilla, no frameworks)",
+  "build_system": "None - single HTML file deployed to GAS via HtmlService.createHtmlOutputFromFile()",
+  "test_framework": "None - manual testing only",
+  "build_command": "N/A - no build step, single HTML file",
+  "test_command": "N/A - open index.html in browser to visually verify",
+  "verification_instructions": "1. Open /projects/sandbox/timestamp/index.html in a browser to verify structure. 2. Check that no static <script src> tags remain in <head>. 3. Verify dynamic loader function exists and calls initApp(). 4. Verify logo position dropdown exists in the Logo card. 5. Verify VRF code renders in gold color center-right. 6. Verify camera fallback code uses getUserMedia for laptops.",
+  "snapshot_or_generated_files": null,
+  "setup_instructions": "No setup needed - edit index.html directly",
+  "environment_constraints": "OPEN_INTERNET network mode. No server-side testing available (GAS backend not present in sandbox). Validation is structural/AST-based only.",
+  "contribution_requirements": "Work on feature/backend-cloud-icons branch. Single file changes to index.html.",
+  "key_patterns": "Single IIFE pattern wrapping all app code. Uses var (ES5 compatible). State object holds all app state. Helper function $(id) wraps getElementById. renderOverlay() is the shared canvas drawing function. initLocation() initializes Leaflet mini-map. initPayment() handles QRIS QR code generation.",
+  "relevant_files": ["/projects/sandbox/timestamp/index.html"],
+  "directory_structure": "Flat structure: index.html (main app), Code.gs (GAS server), BackendService.gs (subscription backend), sw.js (service worker), manifest.json (PWA manifest), icon SVGs"
+}

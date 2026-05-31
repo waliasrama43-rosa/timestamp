@@ -10,9 +10,7 @@
   <link rel="manifest" href="?page=manifest">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+
   <style>
 :root {
   --primary: #1B3A5C;
@@ -367,6 +365,15 @@ select.form-control { appearance: none; background: var(--white) url("data:image
         <button class="btn btn-outline btn-sm" id="btnUploadLogo"><span class="material-icons">upload</span> Unggah Logo</button>
         <button class="btn btn-sm" id="btnRemoveLogo" style="color:red;display:none;">Hapus</button>
       </div>
+      <div class="form-group" style="margin-top:10px;">
+        <label>Posisi Logo</label>
+        <select id="selectLogoPosition" class="form-control">
+          <option value="top-left">Kiri Atas</option>
+          <option value="top-right">Kanan Atas</option>
+          <option value="bottom-left" selected>Kiri Bawah</option>
+          <option value="bottom-right">Kanan Bawah</option>
+        </select>
+      </div>
       <input type="file" id="logoInput" accept="image/*" class="hidden">
     </div>
 
@@ -445,6 +452,24 @@ select.form-control { appearance: none; background: var(--white) url("data:image
       <button class="btn btn-accent btn-sm" id="btnUpgrade">Lihat Paket</button>
     </div>
   </main>
+
+  <!-- Camera Modal (for laptop/desktop) -->
+  <div class="modal-overlay" id="cameraModal">
+    <div class="modal modal-full" style="background:#000;">
+      <div class="modal-header" style="border-bottom-color:#333;">
+        <h2 style="color:#fff;">Kamera</h2>
+        <button class="modal-close" id="btnCloseCamera" style="color:#fff;">&times;</button>
+      </div>
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+        <video id="cameraVideo" autoplay playsinline style="max-width:100%;max-height:100%;"></video>
+      </div>
+      <div style="padding:16px;text-align:center;">
+        <button class="btn btn-accent" id="btnCameraCapture" style="padding:14px 32px;font-size:16px;">
+          <span class="material-icons">camera</span> Ambil Foto
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Bottom Navigation -->
   <nav class="bottom-nav">
@@ -547,8 +572,34 @@ select.form-control { appearance: none; background: var(--white) url("data:image
 
 
   <script>
-(function() {
-  'use strict';
+// Dynamic script loader for GAS HtmlService compatibility
+// GAS strips static <script src> tags on mobile - load dynamically instead
+function loadScripts() {
+  var scripts = [
+    'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+    'https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.js',
+    'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js'
+  ];
+  var loaded = 0;
+  scripts.forEach(function(src) {
+    var s = document.createElement('script');
+    s.src = src;
+    s.onload = function() {
+      loaded++;
+      if (loaded === scripts.length) initApp();
+    };
+    s.onerror = function() {
+      loaded++;
+      console.error('Failed to load: ' + src);
+      if (loaded === scripts.length) initApp();
+    };
+    document.head.appendChild(s);
+  });
+}
+loadScripts();
+
+function initApp() {
+'use strict';
 
   // ==================== STATE ====================
   var state = {
@@ -561,6 +612,7 @@ select.form-control { appearance: none; background: var(--white) url("data:image
     organization: '',
     logoDataURL: null,
     logoImage: null,
+    logoPosition: 'bottom-left',
     deviceInfo: '',
     vrfCode: '',
     tier: 'free', // free, basic, pro
@@ -811,7 +863,15 @@ select.form-control { appearance: none; background: var(--white) url("data:image
 
     zone.addEventListener('click', function() { fileInput.click(); });
     $('btnPickFile').addEventListener('click', function() { fileInput.click(); });
-    $('btnCamera').addEventListener('click', function() { cameraInput.click(); });
+    $('btnCamera').addEventListener('click', function() {
+      // Check if getUserMedia is available (laptop/desktop)
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        openCameraModal();
+      } else {
+        // Fallback: use file input with capture (mobile)
+        cameraInput.click();
+      }
+    });
 
     fileInput.addEventListener('change', function(e) {
       if (e.target.files[0]) handlePhoto(e.target.files[0]);
@@ -829,6 +889,56 @@ select.form-control { appearance: none; background: var(--white) url("data:image
       e.preventDefault(); zone.classList.remove('dragover');
       if (e.dataTransfer.files[0]) handlePhoto(e.dataTransfer.files[0]);
     });
+
+    // Camera modal event listeners
+    $('btnCloseCamera').addEventListener('click', closeCameraModal);
+    $('btnCameraCapture').addEventListener('click', captureFromCamera);
+  }
+
+  function openCameraModal() {
+    $('cameraModal').classList.add('active');
+    var video = $('cameraVideo');
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } } })
+      .then(function(stream) {
+        video.srcObject = stream;
+        video.play();
+      })
+      .catch(function(err) {
+        alert('Gagal mengakses kamera: ' + err.message);
+        closeCameraModal();
+      });
+  }
+
+  function closeCameraModal() {
+    var video = $('cameraVideo');
+    if (video.srcObject) {
+      video.srcObject.getTracks().forEach(function(track) { track.stop(); });
+      video.srcObject = null;
+    }
+    $('cameraModal').classList.remove('active');
+  }
+
+  function captureFromCamera() {
+    var video = $('cameraVideo');
+    var canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    var ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0);
+    var dataURL = canvas.toDataURL('image/jpeg', 0.92);
+    closeCameraModal();
+    // Process as if uploaded
+    state.photoDataURL = dataURL;
+    state.originalExif = null;
+    var img = new Image();
+    img.onload = function() {
+      state.photoImage = img;
+      state.vrfCode = generateVRF();
+      $('vrfCode').textContent = state.vrfCode;
+      $('btnDownload').disabled = false;
+      renderPreview();
+    };
+    img.src = dataURL;
   }
 
   // ==================== DATETIME ====================
@@ -1089,6 +1199,11 @@ select.form-control { appearance: none; background: var(--white) url("data:image
       renderPreview();
     });
 
+    $('selectLogoPosition').addEventListener('change', function() {
+      state.logoPosition = this.value;
+      renderPreview();
+    });
+
     // Load from localStorage
     var saved = localStorage.getItem('trustmark_logo');
     if (saved) {
@@ -1139,6 +1254,21 @@ select.form-control { appearance: none; background: var(--white) url("data:image
     var overlayHeight = Math.max(lineHeight * numLines + padding * 2, 120);
     var overlayY = h - overlayHeight;
 
+    // Draw logo at selected position (on the photo, above overlay)
+    if (state.logoImage) {
+      var logoH = w * 0.06;
+      var logoW = (state.logoImage.naturalWidth / state.logoImage.naturalHeight) * logoH;
+      var logoPad = padding * 2;
+      var logoX, logoY;
+      switch (state.logoPosition) {
+        case 'top-left': logoX = logoPad; logoY = logoPad; break;
+        case 'top-right': logoX = w - logoW - logoPad; logoY = logoPad; break;
+        case 'bottom-right': logoX = w - logoW - logoPad; logoY = overlayY - logoH - logoPad; break;
+        default: logoX = logoPad; logoY = overlayY - logoH - logoPad; break; // bottom-left
+      }
+      ctx.drawImage(state.logoImage, logoX, logoY, logoW, logoH);
+    }
+
     // Draw overlay background
     ctx.fillStyle = 'rgba(255,255,255,0.75)';
     ctx.fillRect(0, overlayY, w, overlayHeight);
@@ -1173,17 +1303,10 @@ select.form-control { appearance: none; background: var(--white) url("data:image
     ctx.fillText(titleStr, padding, textY);
     textY += lineHeight;
 
-    // Line 5: Logo left, VRF badge right
-    if (state.logoImage) {
-      var logoH = lineHeight * 1.2;
-      var logoW = (state.logoImage.naturalWidth / state.logoImage.naturalHeight) * logoH;
-      ctx.drawImage(state.logoImage, padding, textY - fontSize, logoW, logoH);
-    }
-
-    // VRF code vertical on right edge
+    // VRF code vertical on right edge (gold, smaller)
     ctx.save();
-    ctx.fillStyle = '#2E7D5B';
-    var vrfFontSize = fontSize * 0.7;
+    ctx.fillStyle = '#D4A841';
+    var vrfFontSize = fontSize * 0.55;
     ctx.font = 'bold ' + vrfFontSize + 'px monospace';
     var vrfText = state.vrfCode;
     // Clamp VRF text length to fit within overlay height
@@ -1731,7 +1854,7 @@ select.form-control { appearance: none; background: var(--white) url("data:image
     $('vrfCode').textContent = state.vrfCode;
   });
 
-})();
+}
   </script>
 </body>
 </html>
