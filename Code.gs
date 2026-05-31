@@ -24,6 +24,7 @@ var ICON_SVG_512 = '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="
 
 /**
  * Serves the main web app or special resources based on query parameter.
+ * Uses createTemplateFromFile for the main page to enable <?!= ?> includes.
  * @param {Object} e - The event object from a GET request.
  * @return {HtmlOutput|TextOutput} The HTML page or text resource.
  */
@@ -56,7 +57,16 @@ function doGet(e) {
     return handleApiRequest(e);
   }
 
-  return HtmlService.createHtmlOutputFromFile('index')
+  if (page === 'test') {
+    return HtmlService.createHtmlOutputFromFile('test-minimal')
+      .setTitle('TrustMark - Test')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1.0');
+  }
+
+  // Use evaluate() for template processing (supports <?!= include() ?>)
+  var template = HtmlService.createTemplateFromFile('index');
+  return template.evaluate()
     .setTitle('TrustMark')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1.0');

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TrustMark - Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #F5F7FA;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+    }
+    h1 { color: #1B3A5C; margin-bottom: 8px; }
+    .status { margin: 16px 0; padding: 12px; border-radius: 8px; font-weight: 600; }
+    .ok { background: #d4edda; color: #155724; }
+    .fail { background: #f8d7da; color: #721c24; }
+    .test-item { text-align: left; padding: 8px 0; border-bottom: 1px solid #eee; }
+    .test-item:last-child { border-bottom: none; }
+    .icon { margin-right: 8px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>TrustMark</h1>
+    <p style="color:#666;">Diagnostic Test Page</p>
+    
+    <div class="status ok" id="statusMain">
+      ✅ HTML berhasil dimuat!
+    </div>
+
+    <div id="testResults">
+      <div class="test-item" id="testBase">⏳ Base target="_top"...</div>
+      <div class="test-item" id="testLeaflet">⏳ Leaflet CDN...</div>
+      <div class="test-item" id="testPiexif">⏳ Piexifjs CDN...</div>
+      <div class="test-item" id="testQRCode">⏳ QRCode CDN...</div>
+      <div class="test-item" id="testGAS">⏳ google.script.run...</div>
+    </div>
+  </div>
+
+  <!-- Test External CDN Scripts -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+
+  <script>
+    function setResult(id, success, msg) {
+      var el = document.getElementById(id);
+      el.textContent = (success ? '✅ ' : '❌ ') + msg;
+      el.style.color = success ? '#155724' : '#721c24';
+    }
+
+    // Test 1: Base target (always passes if page loads)
+    setResult('testBase', true, 'base target="_top" OK');
+
+    // Test 2: Leaflet
+    if (typeof L !== 'undefined' && L.map) {
+      setResult('testLeaflet', true, 'Leaflet v' + L.version + ' loaded');
+    } else {
+      setResult('testLeaflet', false, 'Leaflet GAGAL dimuat');
+    }
+
+    // Test 3: Piexifjs
+    if (typeof piexif !== 'undefined') {
+      setResult('testPiexif', true, 'Piexifjs loaded');
+    } else {
+      setResult('testPiexif', false, 'Piexifjs GAGAL dimuat');
+    }
+
+    // Test 4: QRCode
+    if (typeof QRCode !== 'undefined') {
+      setResult('testQRCode', true, 'QRCode loaded');
+    } else {
+      setResult('testQRCode', false, 'QRCode GAGAL dimuat');
+    }
+
+    // Test 5: google.script.run
+    if (typeof google !== 'undefined' && google.script && google.script.run) {
+      setResult('testGAS', true, 'google.script.run tersedia');
+    } else {
+      setResult('testGAS', false, 'google.script.run TIDAK tersedia (normal jika buka langsung)');
+    }
+
+    // Overall status
+    var allOk = (typeof L !== 'undefined') && (typeof piexif !== 'undefined') && (typeof QRCode !== 'undefined');
+    var statusEl = document.getElementById('statusMain');
+    if (allOk) {
+      statusEl.textContent = '✅ Semua library berhasil dimuat! App siap digunakan.';
+      statusEl.className = 'status ok';
+    } else {
+      statusEl.textContent = '❌ Beberapa library gagal dimuat. Lihat detail di bawah.';
+      statusEl.className = 'status fail';
+    }
+  </script>
+</body>
+</html>
