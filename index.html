@@ -1186,6 +1186,13 @@ select.form-control { appearance: none; background: var(--white) url("data:image
     var vrfFontSize = fontSize * 0.7;
     ctx.font = 'bold ' + vrfFontSize + 'px monospace';
     var vrfText = state.vrfCode;
+    // Clamp VRF text length to fit within overlay height
+    var vrfMetrics = ctx.measureText(vrfText);
+    var maxVrfWidth = overlayHeight - padding * 2;
+    if (vrfMetrics.width > maxVrfWidth) {
+      vrfFontSize = vrfFontSize * (maxVrfWidth / vrfMetrics.width);
+      ctx.font = 'bold ' + vrfFontSize + 'px monospace';
+    }
     var vrfX = w - padding * 0.8;
     var vrfY = overlayY + overlayHeight * 0.5;
     ctx.translate(vrfX, vrfY);
@@ -1198,7 +1205,7 @@ select.form-control { appearance: none; background: var(--white) url("data:image
     if (state.tier === 'free') {
       ctx.save();
       ctx.globalAlpha = 0.3;
-      ctx.fillStyle = '#FFFFFF';
+      ctx.fillStyle = '#1B3A5C';
       ctx.font = 'bold ' + (w * 0.04) + 'px sans-serif';
       ctx.fillText('TrustMark', padding, overlayY - (w * 0.02));
       ctx.restore();

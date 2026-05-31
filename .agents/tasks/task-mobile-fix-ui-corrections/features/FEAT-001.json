@@ -27,5 +27,5 @@
     "Verify the renderOverlay function uses white background, dark text, vertical VRF, no tier check on logo, and reduced line height"
   ],
   "blocked_reason": null,
-  "findings": "All 7 changes applied successfully to index.html. No build/test system exists - verification is manual browser testing only. Script tags fixed (no more backslash escaping), VRF generates 12-char codes, overlay uses white background with dark text, line height reduced, logo always renders, VRF code displayed vertically on right edge."
+  "findings": "All 7 changes applied successfully to index.html. No build/test system exists - verification is manual browser testing only. Script tags fixed (no more backslash escaping), VRF generates 12-char codes, overlay uses white background with dark text, line height reduced, logo always renders, VRF code displayed vertically on right edge. Review feedback addressed: watermark color changed from #FFFFFF to #1B3A5C (dark primary color visible on white background), VRF font size clamped proportionally when text width exceeds available overlay height minus padding. Logo/tier inconsistency is intentional per user request."
 }
