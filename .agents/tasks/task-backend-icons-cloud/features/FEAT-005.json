@@ -1,0 +1,24 @@
+{
+  "id": "FEAT-005",
+  "type": "fix",
+  "description": "Address 3 issues from v2 review: residual innerHTML XSS in loadCloudPhotos error handler, thumbnailUrl returns non-renderable Drive page URL, and unbounded ScriptProperties growth in generateTransactionId and validatePayment.",
+  "status": "in_progress",
+  "steps": [
+    "In index.html, replace innerHTML XSS in loadCloudPhotos withFailureHandler with safe DOM APIs (createElement, textContent).",
+    "In BackendService.gs getPhotoHistory, change thumbnailUrl from f.getUrl() to Drive thumbnail API URL format.",
+    "In BackendService.gs generateTransactionId, remove the ScriptProperties write since replay protection is handled by the active-subscription check in activateSubscription.",
+    "In BackendService.gs validatePayment, remove the ScriptProperties write since the active-subscription check in activateSubscription already prevents replay."
+  ],
+  "acceptance_criteria": [
+    "loadCloudPhotos failure handler uses textContent instead of innerHTML with unsanitized err.message",
+    "getPhotoHistory returns thumbnailUrl using https://drive.google.com/thumbnail?id=FILE_ID&sz=w200 format",
+    "generateTransactionId does not write to ScriptProperties",
+    "validatePayment does not write to or read from ScriptProperties"
+  ],
+  "verification": [
+    "Validate BackendService.gs syntax",
+    "Validate index.html JS syntax"
+  ],
+  "blocked_reason": null,
+  "findings": null
+}

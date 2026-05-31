@@ -129,7 +129,7 @@ function activateSubscription(tier, amount) {
 
 /**
  * Validates a payment and activates the subscription.
- * Checks transaction ID for replay prevention.
+ * Replay protection is handled by activateSubscription's active-subscription check.
  * @param {string} tier - The subscription tier
  * @param {number} amount - The payment amount
  * @param {string} transactionId - Client-provided transaction reference (optional)
@@ -148,44 +148,18 @@ function validatePayment(tier, amount, transactionId) {
     throw new Error('Payment amount mismatch for tier ' + tier);
   }
 
-  // Check for replay if transactionId provided
-  if (transactionId) {
-    var scriptProps = PropertiesService.getScriptProperties();
-    var existingTx = scriptProps.getProperty('tx_' + transactionId);
-    if (existingTx) {
-      throw new Error('Transaction already processed: ' + transactionId);
-    }
-    // Store transaction to prevent replay
-    scriptProps.setProperty('tx_' + transactionId, JSON.stringify({
-      tier: tier,
-      amount: numAmount,
-      timestamp: Date.now(),
-      user: Session.getActiveUser().getEmail()
-    }));
-  }
-
-  // Activate the subscription
+  // Activate the subscription (replay protection via active-subscription check)
   return activateSubscription(tier, numAmount);
 }
 
 /**
  * Generates a unique transaction ID using timestamp and random component.
- * Stores in ScriptProperties to prevent replay attacks.
  * @return {string} Unique transaction ID
  */
 function generateTransactionId() {
   var timestamp = Date.now().toString(36);
   var random = Math.random().toString(36).substring(2, 8);
-  var txId = 'TM-' + timestamp + '-' + random;
-
-  // Store in script properties for replay prevention
-  var scriptProps = PropertiesService.getScriptProperties();
-  scriptProps.setProperty('tx_' + txId, JSON.stringify({
-    generated: Date.now(),
-    user: Session.getActiveUser().getEmail()
-  }));
-
-  return txId;
+  return 'TM-' + timestamp + '-' + random;
 }
 
 // ==================== CLOUD STORAGE (GOOGLE DRIVE) ====================
@@ -297,7 +271,7 @@ function getPhotoHistory(page, pageSize) {
       id: f.getId(),
       name: f.getName(),
       url: f.getUrl(),
-      thumbnailUrl: f.getUrl(),
+      thumbnailUrl: 'https://drive.google.com/thumbnail?id=' + f.getId() + '&sz=w200',
       createdDate: f.getDateCreated().toISOString(),
       description: f.getDescription() || ''
     });

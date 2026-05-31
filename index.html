@@ -1592,7 +1592,13 @@ select.form-control { appearance: none; background: var(--white) url("data:image
       .withSuccessHandler(renderCloudPhotos)
       .withFailureHandler(function(err) {
         $('cloudLoading').classList.add('hidden');
-        $('cloudPhotoGrid').innerHTML = '<p style="color:red;text-align:center;">Gagal memuat: ' + err.message + '</p>';
+        var grid = $('cloudPhotoGrid');
+        grid.innerHTML = '';
+        var p = document.createElement('p');
+        p.style.color = 'red';
+        p.style.textAlign = 'center';
+        p.textContent = 'Gagal memuat: ' + (err && err.message ? err.message : 'Terjadi kesalahan');
+        grid.appendChild(p);
       })
       .getPhotoHistory(cloudPage, CLOUD_PAGE_SIZE);
   }
