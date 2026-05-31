@@ -1,0 +1,21 @@
+{
+  "project_type": "Google Apps Script PWA (Progressive Web App)",
+  "language": "JavaScript (GAS server-side + client-side in index.html)",
+  "build_system": "Google Apps Script - no build step, files are served directly via doGet()",
+  "test_framework": "None - no existing tests. Validation is manual or AST-based.",
+  "build_command": "N/A - GAS web app deployed directly. Use syntax validation: node --check on .js portions.",
+  "test_command": "N/A - no test framework. Validate by parsing JS/HTML for syntax errors.",
+  "verification_instructions": "1. Validate Code.gs and BackendService.gs syntax (GAS server-side JS). 2. Validate index.html is well-formed HTML with valid JS. 3. Validate manifest.json is valid JSON. 4. Validate sw.js is valid JS. 5. Ensure icon SVG files are valid SVG. 6. Check all google.script.run calls match backend function signatures.",
+  "snapshot_or_generated_files": "Icon PNG files will be generated from SVG using Node.js canvas. Generated files: icons/icon-192.png, icons/icon-512.png",
+  "setup_instructions": "No setup needed - GAS project files are edited directly. For icon generation, use Node.js with canvas/sharp packages.",
+  "environment_constraints": "OPEN_INTERNET network mode. Node.js 22 available. Cannot test GAS-specific APIs (google.script.run, DriveApp, PropertiesService) locally - validate via AST/syntax only. GAS does not support ES6 modules or import statements; must use global functions.",
+  "contribution_requirements": "Keep files compatible with Google Apps Script editor. Code.gs and new .gs files use GAS server-side runtime (V8). index.html is a single-file app served by HtmlService. manifest.json and sw.js are served as text content via doGet() query params.",
+  "key_patterns": "1. doGet(e) dispatches on e.parameter.page to serve different resources. 2. All client code is inside an IIFE in index.html <script> tag. 3. State management uses a plain 'state' object. 4. localStorage stores subscription, favorites, logo, daily count. 5. Subscription has tier (free/basic/pro), expiry timestamp, amount_paid. 6. QRIS payment is generated client-side with CRC calculation. 7. Payment confirmation is client-side only (saveSubscription to localStorage).",
+  "relevant_files": [
+    "Code.gs",
+    "index.html",
+    "manifest.json",
+    "sw.js"
+  ],
+  "directory_structure": "Flat structure - all files at root: Code.gs (GAS backend), index.html (full PWA app), manifest.json (PWA manifest), sw.js (service worker). New files: BackendService.gs (server-side payment/subscription/cloud logic), icons/ directory for generated icons."
+}
