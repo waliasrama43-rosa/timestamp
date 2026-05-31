@@ -1,0 +1,31 @@
+{
+  "id": "FEAT-001",
+  "type": "fix",
+  "description": "Fix all 6 issues in index.html: broken script tags preventing mobile load, VRF code style, logo not appearing, overlay background color, mini map (caused by script tags), and address spacing",
+  "status": "in_progress",
+  "steps": [
+    "Fix script tags on lines 13-15 of /projects/sandbox/timestamp/index.html: change `<\\/script>` to `</script>` for all three CDN script tags (leaflet, piexif, qrcode). This is the root cause of 'unable to open' on mobile since GAS HtmlService does not need escaped closing script tags.",
+    "Modify the generateVRF() function (around line 583) to produce a longer alphanumeric code (12+ characters) in format like 'VRF-A3X7K9M2P4B6' instead of the current 6-character code.",
+    "In the renderOverlay() function (around line 1095), change the VRF code rendering from horizontal text on the bottom-right to a vertically-rotated text (using ctx.save/rotate/restore with -90 degree rotation) positioned on the right edge of the overlay, with a smaller font size.",
+    "In the renderOverlay() function, remove the tier check for logo drawing. Change `if (state.logoImage && state.tier !== 'free')` to just `if (state.logoImage)` so the logo always appears when uploaded regardless of subscription tier.",
+    "In the renderOverlay() function, change the overlay background from `ctx.fillStyle = 'rgba(0,0,0,0.65)'` to `ctx.fillStyle = 'rgba(255,255,255,0.75)'` for a transparent white background.",
+    "Update text colors in renderOverlay() to work with the white background: keep the gold color (#D4A841) for line 1 (date/time/location), change white (#FFFFFF) text on lines 2-5 to dark color (#333333 or similar) since the background is now white.",
+    "Reduce line spacing in renderOverlay(): change `lineHeight = fontSize * 1.5` to `lineHeight = fontSize * 1.25` to make address and other text lines more compact/closer to the bottom."
+  ],
+  "acceptance_criteria": [
+    "All three script tags on lines 13-15 use normal `</script>` closing tags without backslash escaping",
+    "generateVRF() produces codes with 12+ alphanumeric characters after the 'VRF-' prefix",
+    "VRF code is rendered vertically (rotated -90 degrees) on the right side of the overlay in a small font",
+    "Logo is drawn in the overlay whenever state.logoImage exists, regardless of tier",
+    "Overlay background uses rgba(255,255,255,0.75) or similar white transparency",
+    "Text colors on the overlay are adjusted to be readable on white background (dark text for info lines)",
+    "Line height is reduced to fontSize * 1.25 for more compact spacing"
+  ],
+  "verification": [
+    "Open /projects/sandbox/timestamp/index.html in a browser and verify no JavaScript console errors (script tags load correctly)",
+    "Inspect the source to confirm no `<\\/script>` patterns remain",
+    "Verify the renderOverlay function uses white background, dark text, vertical VRF, no tier check on logo, and reduced line height"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

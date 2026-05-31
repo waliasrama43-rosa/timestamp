@@ -1,0 +1,16 @@
+{
+  "project_type": "Google Apps Script web app (single-file HTML with embedded CSS+JS), served via HtmlService",
+  "language": "HTML/CSS/JavaScript (vanilla, no frameworks)",
+  "build_system": "None - single file deployment to Google Apps Script",
+  "test_framework": "None - manual testing via browser",
+  "build_command": null,
+  "test_command": null,
+  "verification_instructions": "Open index.html in a browser to verify: 1) No script tag errors in console 2) Leaflet map initializes 3) Upload a photo and check overlay renders with white background, vertical VRF code on right, logo visible, compact address spacing",
+  "snapshot_or_generated_files": null,
+  "setup_instructions": "No setup needed - single HTML file",
+  "environment_constraints": "OPEN_INTERNET network mode. No build system. All changes in single index.html file.",
+  "contribution_requirements": "All code in index.html. GAS HtmlService does NOT need escaped script tags.",
+  "key_patterns": "IIFE pattern wrapping all JS. State object holds app state. renderOverlay(ctx, w, h) is the shared overlay renderer used by both preview and download. generateVRF() creates verification codes. Logo rendering is conditional on state.tier !== 'free'. Mini map uses Leaflet L.map().",
+  "relevant_files": ["/projects/sandbox/timestamp/index.html"],
+  "directory_structure": "Single file app: index.html (main app ~1723 lines), Code.gs (GAS server), BackendService.gs (backend), manifest.json (PWA manifest), sw.js (service worker), icon-*.svg (PWA icons)"
+}

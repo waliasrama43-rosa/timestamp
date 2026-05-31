@@ -10,9 +10,9 @@
   <link rel="manifest" href="?page=manifest">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
-  <script src="https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.js"><\/script>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"><\/script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <style>
 :root {
   --primary: #1B3A5C;
@@ -582,7 +582,7 @@ select.form-control { appearance: none; background: var(--white) url("data:image
   function generateVRF() {
     var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     var code = 'VRF-';
-    for (var i = 0; i < 6; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+    for (var i = 0; i < 12; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
     return code;
   }
 
@@ -1133,14 +1133,14 @@ select.form-control { appearance: none; background: var(--white) url("data:image
     // Calculate font and overlay dimensions based on image width
     var padding = w * 0.025;
     var fontSize = Math.max(w * 0.022, 12);
-    var lineHeight = fontSize * 1.5;
+    var lineHeight = fontSize * 1.25;
     var numLines = 5;
     // Overlay height derived from actual content size to prevent overflow
     var overlayHeight = Math.max(lineHeight * numLines + padding * 2, 120);
     var overlayY = h - overlayHeight;
 
     // Draw overlay background
-    ctx.fillStyle = 'rgba(0,0,0,0.65)';
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
     ctx.fillRect(0, overlayY, w, overlayHeight);
 
     var textY = overlayY + padding + fontSize;
@@ -1155,37 +1155,44 @@ select.form-control { appearance: none; background: var(--white) url("data:image
     ctx.fillText(line1, padding, textY);
     textY += lineHeight;
 
-    // Line 2: GPS coords (White)
-    ctx.fillStyle = '#FFFFFF';
+    // Line 2: GPS coords (Dark)
+    ctx.fillStyle = '#333333';
     ctx.font = fontSize + 'px sans-serif';
     var coordsStr = state.location.lat ? 'Lat: ' + state.location.lat.toFixed(6) + ', Long: ' + state.location.lng.toFixed(6) : 'Lat: -, Long: -';
     ctx.fillText(coordsStr, padding, textY);
     textY += lineHeight;
 
-    // Line 3: Full address (White)
+    // Line 3: Full address (Dark)
     var addressStr = state.location.address || '-';
     if (addressStr.length > 80) addressStr = addressStr.substring(0, 77) + '...';
     ctx.fillText(addressStr, padding, textY);
     textY += lineHeight;
 
-    // Line 4: Title (White)
+    // Line 4: Title (Dark)
     var titleStr = state.title || '-';
     ctx.fillText(titleStr, padding, textY);
     textY += lineHeight;
 
     // Line 5: Logo left, VRF badge right
-    if (state.logoImage && state.tier !== 'free') {
+    if (state.logoImage) {
       var logoH = lineHeight * 1.2;
       var logoW = (state.logoImage.naturalWidth / state.logoImage.naturalHeight) * logoH;
       ctx.drawImage(state.logoImage, padding, textY - fontSize, logoW, logoH);
     }
 
-    // VRF badge on right
+    // VRF code vertical on right edge
+    ctx.save();
     ctx.fillStyle = '#2E7D5B';
-    var vrfText = '\u2713 ' + state.vrfCode;
-    ctx.font = 'bold ' + fontSize + 'px sans-serif';
-    var vrfWidth = ctx.measureText(vrfText).width;
-    ctx.fillText(vrfText, w - padding - vrfWidth, textY);
+    var vrfFontSize = fontSize * 0.7;
+    ctx.font = 'bold ' + vrfFontSize + 'px monospace';
+    var vrfText = state.vrfCode;
+    var vrfX = w - padding * 0.8;
+    var vrfY = overlayY + overlayHeight * 0.5;
+    ctx.translate(vrfX, vrfY);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = 'center';
+    ctx.fillText(vrfText, 0, 0);
+    ctx.restore();
 
     // Free tier watermark
     if (state.tier === 'free') {

@@ -1,0 +1,7 @@
+{
+  "task_id": "task-mobile-fix-ui-corrections",
+  "task_description": "Fix TrustMark app unable to open on mobile (broken script tags) and 5 UI corrections: vertical VRF code, logo visibility, white overlay background, mini map loading, and compact address spacing",
+  "status": "in_progress",
+  "feature_order": ["FEAT-001"],
+  "blocked_reason": null
+}
