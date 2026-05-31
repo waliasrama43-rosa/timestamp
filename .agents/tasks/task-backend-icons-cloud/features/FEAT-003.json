@@ -1,0 +1,36 @@
+{
+  "id": "FEAT-003",
+  "type": "feat",
+  "description": "Add Google Drive cloud storage integration for Pro tier users. Pro users can save timestamped photos to Google Drive, view photo history, and sync across devices. Backend uses DriveApp in BackendService.gs; frontend adds a cloud storage UI section and sync buttons in index.html.",
+  "status": "in_progress",
+  "steps": [
+    "In BackendService.gs, add cloud storage functions: (1) savePhotoToDrive(base64Data, filename, metadata) - saves a photo as JPEG to the user's Google Drive in a 'TrustMark' folder. Creates the folder if it doesn't exist. Stores metadata (location, datetime, title, vrf code) in the file description. Returns the file ID and URL. (2) getPhotoHistory(page, pageSize) - lists files in the TrustMark Drive folder with metadata, supports pagination. Returns array of {id, name, url, thumbnailUrl, createdDate, metadata}. (3) deletePhotoFromDrive(fileId) - deletes a specific photo. (4) getStorageQuota() - returns remaining Google Drive quota info.",
+    "In BackendService.gs savePhotoToDrive: Use DriveApp.getRootFolder() to find or create 'TrustMark' subfolder. Use Utilities.newBlob(Utilities.base64Decode(base64Data), 'image/jpeg', filename) to create the file. Set file description to JSON metadata string. Return { fileId: file.getId(), url: file.getUrl(), name: file.getName() }.",
+    "In BackendService.gs, add a helper function getTrustMarkFolder() that finds or creates the TrustMark folder in user's Drive root. Cache the folder ID in UserProperties to avoid repeated lookups.",
+    "In index.html, add a 'Cloud Storage' section/card (visible only for Pro tier users) after the download section. It contains: (1) A toggle/button 'Auto-save to Drive' that enables automatic cloud save on download. (2) A 'Photo History' button that opens a modal showing saved photos from Drive. (3) Storage quota indicator.",
+    "In index.html, add a cloudStorageModal with: (1) Grid/list view of saved photos from Drive (thumbnail, name, date). (2) Each photo has a 'view' link (opens in Drive) and 'delete' button. (3) Pagination controls. (4) Loading state with spinner.",
+    "In index.html, modify the doDownload() function: after successful download, if user is Pro tier AND auto-save is enabled, call google.script.run.withSuccessHandler(onCloudSaveSuccess).withFailureHandler(onCloudSaveError).savePhotoToDrive(base64Data, filename, metadataObj). Show a toast/notification on success ('Saved to Google Drive').",
+    "In index.html, add functions: (1) loadPhotoHistory() - calls google.script.run.getPhotoHistory(). (2) renderPhotoHistory(photos) - renders the photo grid in the modal. (3) deleteCloudPhoto(fileId) - calls google.script.run.deletePhotoFromDrive(). (4) toggleAutoSave() - saves preference to localStorage.",
+    "Add the auto-save preference to localStorage key 'trustmark_autosave_drive' (boolean). Load it on init and reflect in the UI toggle state.",
+    "Update the Pro tier pricing card description to mention 'Cloud Storage (Google Drive)' as a feature. Update the <ul> in the Pro pricing-card to include '<li>Simpan ke Google Drive</li>'."
+  ],
+  "acceptance_criteria": [
+    "BackendService.gs has savePhotoToDrive, getPhotoHistory, deletePhotoFromDrive, getStorageQuota functions",
+    "BackendService.gs uses DriveApp to create TrustMark folder and save files",
+    "index.html has a Cloud Storage card/section visible only for Pro tier",
+    "index.html has a cloudStorageModal with photo history grid",
+    "doDownload function conditionally saves to Drive for Pro users with auto-save enabled",
+    "Pro tier pricing card mentions Google Drive cloud storage",
+    "All google.script.run calls have success and failure handlers",
+    "Cloud features gracefully degrade when not in GAS context (feature hidden or disabled)"
+  ],
+  "verification": [
+    "Validate BackendService.gs syntax with node -e script that replaces GAS globals",
+    "Validate index.html contains cloudStorageModal element",
+    "Validate index.html contains savePhotoToDrive call within doDownload",
+    "Confirm Pro pricing card mentions Drive storage",
+    "Validate all new HTML elements have proper structure (no unclosed tags)"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

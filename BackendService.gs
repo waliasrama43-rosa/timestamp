@@ -173,3 +173,160 @@ function generateTransactionId() {
 
   return txId;
 }
+
+// ==================== CLOUD STORAGE (GOOGLE DRIVE) ====================
+
+/**
+ * Finds or creates the TrustMark folder in the user's Google Drive root.
+ * Caches the folder ID in UserProperties for efficiency.
+ * @return {Folder} The TrustMark folder object
+ */
+function getTrustMarkFolder() {
+  var userProps = PropertiesService.getUserProperties();
+  var folderId = userProps.getProperty('trustmark_folder_id');
+  if (folderId) {
+    try {
+      return DriveApp.getFolderById(folderId);
+    } catch (e) {
+      // Folder may have been deleted, recreate below
+    }
+  }
+  var folders = DriveApp.getRootFolder().getFoldersByName('TrustMark');
+  if (folders.hasNext()) {
+    var folder = folders.next();
+    userProps.setProperty('trustmark_folder_id', folder.getId());
+    return folder;
+  }
+  var newFolder = DriveApp.getRootFolder().createFolder('TrustMark');
+  userProps.setProperty('trustmark_folder_id', newFolder.getId());
+  return newFolder;
+}
+
+/**
+ * Saves a photo to the user's Google Drive TrustMark folder.
+ * Requires an active Pro subscription.
+ * @param {string} base64Data - Base64-encoded JPEG image data (without data URI prefix)
+ * @param {string} filename - The filename for the saved image
+ * @param {Object} metadata - Metadata object with location, dateTime, title, vrfCode
+ * @return {Object} File info: { fileId, fileName, fileUrl, createdAt }
+ */
+function savePhotoToDrive(base64Data, filename, metadata) {
+  // Verify Pro subscription
+  var sub = checkSubscription();
+  if (!sub || !sub.active || sub.tier !== 'pro') {
+    throw new Error('Cloud storage requires Pro subscription');
+  }
+
+  // Decode base64 and create blob
+  var blob = Utilities.newBlob(Utilities.base64Decode(base64Data), 'image/jpeg', filename);
+
+  // Get or create the TrustMark folder
+  var folder = getTrustMarkFolder();
+
+  // Save file to folder
+  var file = folder.createFile(blob);
+
+  // Set description as JSON metadata
+  if (metadata) {
+    file.setDescription(JSON.stringify(metadata));
+  }
+
+  return {
+    fileId: file.getId(),
+    fileName: file.getName(),
+    fileUrl: file.getUrl(),
+    createdAt: new Date().toISOString()
+  };
+}
+
+/**
+ * Lists saved photos from the TrustMark Drive folder with pagination.
+ * @param {number} page - Page number (1-based), default 1
+ * @param {number} pageSize - Number of items per page, default 12
+ * @return {Array} Array of photo objects: { id, name, url, thumbnailUrl, createdDate, description }
+ */
+function getPhotoHistory(page, pageSize) {
+  page = page || 1;
+  pageSize = pageSize || 12;
+
+  var folder = getTrustMarkFolder();
+  var files = folder.getFilesByType('image/jpeg');
+
+  // Collect all files
+  var allFiles = [];
+  while (files.hasNext()) {
+    allFiles.push(files.next());
+  }
+
+  // Sort by date created (newest first)
+  allFiles.sort(function(a, b) {
+    return b.getDateCreated().getTime() - a.getDateCreated().getTime();
+  });
+
+  // Paginate
+  var offset = (page - 1) * pageSize;
+  var pagedFiles = allFiles.slice(offset, offset + pageSize);
+
+  var results = [];
+  for (var i = 0; i < pagedFiles.length; i++) {
+    var f = pagedFiles[i];
+    results.push({
+      id: f.getId(),
+      name: f.getName(),
+      url: f.getUrl(),
+      thumbnailUrl: f.getUrl(),
+      createdDate: f.getDateCreated().toISOString(),
+      description: f.getDescription() || ''
+    });
+  }
+
+  return results;
+}
+
+/**
+ * Deletes a photo from the TrustMark Drive folder.
+ * Verifies the file is actually in the TrustMark folder before deletion.
+ * @param {string} fileId - The Google Drive file ID to delete
+ * @return {Object} Success indicator: { success: true }
+ */
+function deletePhotoFromDrive(fileId) {
+  var folder = getTrustMarkFolder();
+  var file = DriveApp.getFileById(fileId);
+
+  // Security check: verify file is in the TrustMark folder
+  var parents = file.getParents();
+  var inFolder = false;
+  while (parents.hasNext()) {
+    if (parents.next().getId() === folder.getId()) {
+      inFolder = true;
+      break;
+    }
+  }
+
+  if (!inFolder) {
+    throw new Error('File is not in the TrustMark folder');
+  }
+
+  file.setTrashed(true);
+  return { success: true };
+}
+
+/**
+ * Returns basic storage info for the TrustMark folder.
+ * @return {Object} Storage info: { photoCount, folderUrl }
+ */
+function getStorageInfo() {
+  var folder = getTrustMarkFolder();
+  var files = folder.getFilesByType('image/jpeg');
+
+  var count = 0;
+  while (files.hasNext()) {
+    files.next();
+    count++;
+  }
+
+  return {
+    photoCount: count,
+    folderUrl: folder.getUrl()
+  };
+}
