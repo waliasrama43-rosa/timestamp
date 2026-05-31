@@ -1,0 +1,31 @@
+{
+  "id": "FEAT-001",
+  "type": "feat",
+  "description": "Add server-side backend service (BackendService.gs) for payment validation, subscription management, and user authentication. Update Code.gs to serve new .gs file. Update index.html to call server functions via google.script.run instead of relying solely on localStorage for payment confirmation.",
+  "status": "in_progress",
+  "steps": [
+    "Create BackendService.gs with GAS server-side functions: (1) validatePayment(tier, amount, transactionId) - validates that payment was made for the correct amount and tier, stores subscription in PropertiesService. (2) getSubscription() - returns current user subscription from PropertiesService (using Session.getActiveUser().getEmail() as key). (3) activateSubscription(tier, amount) - server-side activation that stores subscription with expiry. (4) checkSubscription() - called on app load to verify subscription status server-side.",
+    "In BackendService.gs, use PropertiesService.getUserProperties() to store per-user subscription data as JSON. Store: {tier, expiry, amount_paid, activated_at, user_email}. This prevents localStorage spoofing since the server is the source of truth.",
+    "In BackendService.gs, add a generateTransactionId() function that creates a unique transaction reference for each payment attempt, stored server-side to prevent replay attacks.",
+    "Update Code.gs doGet() to add a new page parameter case: if page === 'api', parse action from e.parameter.action and route to appropriate BackendService function. This provides a REST-like API fallback alongside google.script.run.",
+    "Update index.html subscription system: (1) On app load, call google.script.run.withSuccessHandler(syncSubscription).checkSubscription() to get server-side subscription state. (2) On payment confirmation (confirmPayment function), call google.script.run.withSuccessHandler(onPaymentSuccess).withFailureHandler(onPaymentError).activateSubscription(tier, amount) instead of just saving to localStorage. (3) Keep localStorage as a cache/fallback for offline use, but always validate against server on load. (4) Add a syncSubscription(serverSub) function that merges server state with local state - server wins if conflict.",
+    "In index.html, update the confirmPayment() function to show a loading spinner while waiting for server response, and handle errors gracefully (show alert if server validation fails, fall back to localStorage if google.script.run is unavailable - e.g., when running outside GAS context).",
+    "Add error handling: wrap all google.script.run calls in try-catch with fallback to localStorage-only mode. This ensures the app still works if accessed outside GAS (e.g., during development or if GAS is temporarily unavailable)."
+  ],
+  "acceptance_criteria": [
+    "BackendService.gs exists with validatePayment, getSubscription, activateSubscription, checkSubscription functions",
+    "Code.gs doGet handles page=api parameter for REST-like access",
+    "index.html calls google.script.run.activateSubscription on payment confirmation",
+    "index.html calls google.script.run.checkSubscription on app load",
+    "Graceful fallback to localStorage when google.script.run is not available",
+    "All JavaScript in BackendService.gs is valid GAS-compatible V8 syntax (no import/export, no arrow functions in top-level, uses var/let/const appropriately)"
+  ],
+  "verification": [
+    "Run: node -e \"const fs=require('fs'); const code=fs.readFileSync('BackendService.gs','utf8'); new Function(code.replace(/PropertiesService|Session|Logger|DriveApp|Utilities/g,'({getUserProperties:()=>({getProperty:()=>null,setProperty:()=>null,deleteProperty:()=>null}),getActiveUser:()=>({getEmail:()=>'test@test.com'}),log:()=>null})'))\" to validate syntax",
+    "Run: node -e \"const fs=require('fs'); const code=fs.readFileSync('Code.gs','utf8'); console.log('Code.gs syntax OK')\" to confirm no syntax errors in the updated routing",
+    "Validate index.html contains google.script.run calls by searching for the pattern",
+    "Validate that confirmPayment function includes server-side call"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

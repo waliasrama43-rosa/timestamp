@@ -590,6 +590,63 @@ select.form-control { appearance: none; background: var(--white) url("data:image
     updateTierUI();
   }
 
+  /**
+   * Checks if google.script.run is available (running inside GAS context).
+   */
+  function isGASEnvironment() {
+    return (typeof google !== 'undefined' && google.script && google.script.run);
+  }
+
+  /**
+   * Syncs subscription state from server response.
+   * Server wins if there is a conflict (server is source of truth).
+   * @param {Object|null} serverSub - Subscription object from server
+   */
+  function syncSubscriptionFromServer(serverSub) {
+    if (!serverSub) {
+      // No server subscription - keep local if still valid
+      return;
+    }
+
+    if (serverSub.active) {
+      // Server has active subscription - update local
+      var sub = {
+        tier: serverSub.tier,
+        expiry: serverSub.expiry,
+        amount_paid: serverSub.amount_paid || 0,
+        activated: serverSub.activated_at || Date.now(),
+        transaction_id: serverSub.transaction_id || null
+      };
+      localStorage.setItem('trustmark_subscription', JSON.stringify(sub));
+      state.tier = serverSub.tier;
+      state.subscription = sub;
+    } else {
+      // Server subscription expired - clear local
+      state.tier = 'free';
+      state.subscription = null;
+      localStorage.removeItem('trustmark_subscription');
+    }
+    updateTierUI();
+    updateDailyCounter();
+    renderPreview();
+  }
+
+  /**
+   * Loads subscription from server on app start.
+   * Falls back silently if not in GAS environment.
+   */
+  function loadSubscriptionFromServer() {
+    if (!isGASEnvironment()) return;
+    try {
+      google.script.run
+        .withSuccessHandler(syncSubscriptionFromServer)
+        .withFailureHandler(function() { /* silent fallback to localStorage */ })
+        .checkSubscription();
+    } catch(e) {
+      // Not in GAS environment, use localStorage only
+    }
+  }
+
   function updateTierUI() {
     var badge = $('tierBadge');
     badge.textContent = state.tier.toUpperCase();
@@ -1262,11 +1319,47 @@ select.form-control { appearance: none; background: var(--white) url("data:image
 
   function confirmPayment() {
     if (!selectedTier) return;
-    saveSubscription(selectedTier, paymentAmount);
-    $('paymentModal').classList.remove('active');
-    updateDailyCounter();
-    renderPreview();
-    alert('Terima kasih! Paket ' + selectedTier.charAt(0).toUpperCase() + selectedTier.slice(1) + ' aktif.');
+
+    // Show loading state on button
+    var btnConfirm = $('btnConfirmPay');
+    var originalText = btnConfirm.innerHTML;
+    btnConfirm.disabled = true;
+    btnConfirm.innerHTML = '<span class="spinner" style="width:16px;height:16px;border-width:2px;display:inline-block;vertical-align:middle;"></span> Memproses...';
+
+    if (isGASEnvironment()) {
+      // Server-side activation (preferred)
+      google.script.run
+        .withSuccessHandler(function(serverSub) {
+          // Save locally as cache
+          saveSubscription(serverSub.tier, serverSub.amount_paid);
+          btnConfirm.disabled = false;
+          btnConfirm.innerHTML = originalText;
+          $('paymentModal').classList.remove('active');
+          updateDailyCounter();
+          renderPreview();
+          alert('Terima kasih! Paket ' + serverSub.tier.charAt(0).toUpperCase() + serverSub.tier.slice(1) + ' aktif.');
+        })
+        .withFailureHandler(function(err) {
+          // Fallback to localStorage on server error
+          saveSubscription(selectedTier, paymentAmount);
+          btnConfirm.disabled = false;
+          btnConfirm.innerHTML = originalText;
+          $('paymentModal').classList.remove('active');
+          updateDailyCounter();
+          renderPreview();
+          alert('Terima kasih! Paket ' + selectedTier.charAt(0).toUpperCase() + selectedTier.slice(1) + ' aktif.');
+        })
+        .activateSubscription(selectedTier, paymentAmount);
+    } else {
+      // Not in GAS environment - localStorage only
+      saveSubscription(selectedTier, paymentAmount);
+      btnConfirm.disabled = false;
+      btnConfirm.innerHTML = originalText;
+      $('paymentModal').classList.remove('active');
+      updateDailyCounter();
+      renderPreview();
+      alert('Terima kasih! Paket ' + selectedTier.charAt(0).toUpperCase() + selectedTier.slice(1) + ' aktif.');
+    }
   }
 
 
@@ -1363,6 +1456,7 @@ select.form-control { appearance: none; background: var(--white) url("data:image
   document.addEventListener('DOMContentLoaded', function() {
     registerSW();
     loadSubscription();
+    loadSubscriptionFromServer();
     updateDailyCounter();
     initPhotoUpload();
     initDateTime();
