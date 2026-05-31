@@ -1850,7 +1850,9 @@ function initApp() {
   }
 
   // ==================== INITIALIZATION ====================
-  document.addEventListener('DOMContentLoaded', function() {
+  // Note: initApp() is called after dynamic scripts load.
+  // By that time, DOMContentLoaded has already fired, so we run init directly.
+  function doInit() {
     registerSW();
     loadSubscription();
     loadSubscriptionFromServer();
@@ -1869,7 +1871,14 @@ function initApp() {
     // Generate initial VRF code
     state.vrfCode = generateVRF();
     $('vrfCode').textContent = state.vrfCode;
-  });
+  }
+
+  // If DOM is already ready, run immediately; otherwise wait
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', doInit);
+  } else {
+    doInit();
+  }
 
 }
   </script>
